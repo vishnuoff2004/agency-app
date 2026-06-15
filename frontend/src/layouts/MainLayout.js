@@ -78,6 +78,16 @@ function MainLayout() {
     }
   };
 
+  const roleIcon = () => {
+    switch (user?.role) {
+      case 'traveler': return '🧳';
+      case 'driver': return '🚗';
+      case 'agency_admin': return '🏢';
+      case 'admin': return '⚙️';
+      default: return null;
+    }
+  };
+
   const initials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : user?.email?.[0]?.toUpperCase() || 'U';
@@ -89,6 +99,7 @@ function MainLayout() {
           <Link className="navbar-logo" to="/search">
             <span className="navbar-logo-icon">TP</span>
             <span>{t('footer.travelPro', 'TravelPro')}</span>
+            <span className="navbar-role-badge">{roleIcon()}</span>
           </Link>
 
           <div className={`navbar-links ${mobileOpen ? 'mobile-open' : ''}`}>

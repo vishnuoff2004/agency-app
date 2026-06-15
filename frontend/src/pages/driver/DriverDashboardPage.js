@@ -67,7 +67,7 @@ function AgencyPanel() {
       setShowAgencies(false);
     } catch (err) {
       setError(err.response?.data?.message || t('driver.failedCancelRequest', 'Failed to cancel request'));
-    } finally { setRunning(false); } // Note: cancelling state is named differently, wait - in target it was: `finally { setCancelling(false); }`
+    } finally { setCancelling(false); }
   };
 
   if (loadingStatus) return null;

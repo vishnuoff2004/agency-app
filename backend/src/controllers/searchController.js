@@ -3,9 +3,9 @@ const searchService = require('../services/searchService');
 
 async function search(req, res, next) {
   try {
-    const { source, destination, seats, priceMin, priceMax } = req.query;
+    const { source, destination, seats, priceMin, priceMax, vehicleTypes } = req.query;
     const userId = req.user?.id ?? null;
-    const result = await searchService.searchRoutes(source, destination, userId, { seats, priceMin, priceMax });
+    const result = await searchService.searchRoutes(source, destination, userId, { seats, priceMin, priceMax, vehicleTypes });
     res.json(result);
   } catch (err) {
     next(err);

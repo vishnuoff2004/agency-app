@@ -22,6 +22,8 @@ function SearchPage() {
   const [seats, setSeats] = useState('');
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
+  const [vehicleTypes, setVehicleTypes] = useState([]);
+  const [facetCounts, setFacetCounts] = useState(null);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const debouncedSource = useDebounce(source, 300);
@@ -32,9 +34,16 @@ function SearchPage() {
   const navigate = useNavigate();
   const hasFetched = useRef(false);
 
+  const toggleVehicleType = (type) => {
+    setVehicleTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
   useEffect(() => {
     if (!debouncedSource && !debouncedDestination) {
       setResults([]);
+      setFacetCounts(null);
       return;
     }
     hasFetched.current = true;
@@ -49,16 +58,23 @@ function SearchPage() {
         if (debouncedSeats) params.seats = debouncedSeats;
         if (debouncedPriceMin) params.priceMin = debouncedPriceMin;
         if (debouncedPriceMax) params.priceMax = debouncedPriceMax;
+        if (vehicleTypes.length > 0) params.vehicleTypes = vehicleTypes.join(',');
         const res = await api.get('/routes/search', { params });
-        if (!cancelled) setResults(res.data.data || []);
+        if (!cancelled) {
+          setResults(res.data.data || []);
+          setFacetCounts(res.data.facetCounts || null);
+        }
       } catch {
-        if (!cancelled) setResults([]);
+        if (!cancelled) {
+          setResults([]);
+          setFacetCounts(null);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [debouncedSource, debouncedDestination, debouncedSeats, debouncedPriceMin, debouncedPriceMax]);
+  }, [debouncedSource, debouncedDestination, debouncedSeats, debouncedPriceMin, debouncedPriceMax, vehicleTypes]);
 
   return (
     <div className="search-page">
@@ -129,6 +145,34 @@ function SearchPage() {
             </div>
           </div>
         </ScrollReveal>
+
+        {facetCounts && facetCounts.vehicleType && Object.keys(facetCounts.vehicleType).length > 0 && (
+          <ScrollReveal className="animate-fade-up">
+            <div className="search-facets">
+              <div className="search-facet-group">
+                <span className="search-facet-label">{t('search.vehicleType', 'Vehicle Type')}</span>
+                <div className="search-facet-options">
+                  {Object.entries(facetCounts.vehicleType).map(([type, count]) => (
+                    <label key={type} className={`search-facet-chip${vehicleTypes.includes(type) ? ' active' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={vehicleTypes.includes(type)}
+                        onChange={() => toggleVehicleType(type)}
+                      />
+                      <span className="search-facet-chip-label">{type}</span>
+                      <span className="search-facet-chip-count">{count}</span>
+                    </label>
+                  ))}
+                  {vehicleTypes.length > 0 && (
+                    <button className="search-facet-clear" onClick={() => setVehicleTypes([])}>
+                      ✕ {t('search.clear', 'Clear')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        )}
 
         {loading && (
           <div className="search-results">

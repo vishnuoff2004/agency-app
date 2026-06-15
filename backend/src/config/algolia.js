@@ -28,6 +28,7 @@ if (appId && apiKey) {
               'filterOnly(departureTimeTimestamp)',
               'filterOnly(fare)',
               'filterOnly(capacity)',
+              'vehicleType',
             ],
           },
         });

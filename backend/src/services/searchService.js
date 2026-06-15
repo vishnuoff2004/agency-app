@@ -29,12 +29,21 @@ async function searchRoutesDatabase(source, destination, userId = null, filters 
     where.capacity = { [Op.gte]: parseInt(filters.seats, 10) };
   }
 
+  const driverWhere = {};
+  if (filters.vehicleTypes) {
+    const types = filters.vehicleTypes.split(',').map(t => t.trim()).filter(Boolean);
+    if (types.length > 0) {
+      driverWhere.vehicleType = { [Op.in]: types };
+    }
+  }
+
   const routes = await Route.findAll({
     where,
     include: [
       {
         model: Driver,
         required: true,
+        where: Object.keys(driverWhere).length > 0 ? driverWhere : undefined,
         include: [{ model: Agency, where: { active: true }, required: true }],
       },
     ],
@@ -114,7 +123,9 @@ async function searchRoutes(source, destination, userId = null, filters = {}) {
   const client = getAlgoliaClient();
   if (!client) {
     // If Algolia is not initialized, use database search
-    return searchRoutesDatabase(source, destination, userId, filters);
+    const result = await searchRoutesDatabase(source, destination, userId, filters);
+    result.facetCounts = null;
+    return result;
   }
 
   try {
@@ -124,7 +135,7 @@ async function searchRoutes(source, destination, userId = null, filters = {}) {
     // 2. Build Algolia filters (available, active, future time)
     const algoliaFilters = [
       'available = 1',
-      'status = active',
+      'status:active',
       `departureTimeTimestamp >= ${Math.floor(Date.now() / 1000)}`,
     ];
 
@@ -142,6 +153,13 @@ async function searchRoutes(source, destination, userId = null, filters = {}) {
       algoliaFilters.push(`capacity >= ${parseInt(filters.seats, 10)}`);
     }
 
+    if (filters.vehicleTypes) {
+      const types = filters.vehicleTypes.split(',').map(t => t.trim()).filter(Boolean);
+      if (types.length > 0) {
+        algoliaFilters.push(`(${types.map(t => `vehicleType:"${t}"`).join(' OR ')})`);
+      }
+    }
+
     console.log(`Querying Algolia with query "${query}" and filters "${algoliaFilters.join(' AND ')}"...`);
 
     // 3. Search single index (v5 SDK syntax)
@@ -150,13 +168,14 @@ async function searchRoutes(source, destination, userId = null, filters = {}) {
       searchParams: {
         query,
         filters: algoliaFilters.join(' AND '),
+        facets: ['vehicleType'],
         hitsPerPage: 100,
       },
     });
 
     const routeIds = searchResult.hits.map((hit) => hit.id);
     if (routeIds.length === 0) {
-      return { data: [], message: 'No routes found for this destination' };
+      return { data: [], message: 'No routes found for this destination', facetCounts: searchResult.facets || null };
     }
 
     // 4. Retrieve database entities for availability checking
@@ -175,10 +194,14 @@ async function searchRoutes(source, destination, userId = null, filters = {}) {
     const routesMap = new Map(routes.map((r) => [r.id, r]));
     const orderedRoutes = routeIds.map((id) => routesMap.get(id)).filter(Boolean);
 
-    return processRouteAvailability(orderedRoutes, userId);
+    const result = await processRouteAvailability(orderedRoutes, userId);
+    result.facetCounts = searchResult.facets || null;
+    return result;
   } catch (err) {
     console.error('Algolia search failed, falling back to database search:', err.message);
-    return searchRoutesDatabase(source, destination, userId, filters);
+    const result = await searchRoutesDatabase(source, destination, userId, filters);
+    result.facetCounts = null;
+    return result;
   }
 }
 
