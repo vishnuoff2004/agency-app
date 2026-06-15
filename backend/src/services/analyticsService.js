@@ -6,12 +6,29 @@ const redis = require('../config/redis');
 const cache = CacheService(redis);
 const ANALYTICS_CACHE_TTL = 300;
 
-function buildAnalyticsCacheKey(startDate, endDate) {
-  return `analytics:bookings-by-date:${startDate || '*'}:${endDate || '*'}`;
+function buildAnalyticsCacheKey(startDate, endDate, agencyId = 'global') {
+  return `analytics:bookings-by-date:${agencyId}:${startDate || '*'}:${endDate || '*'}`;
 }
 
-async function getBookingsByDate(startDate, endDate) {
-  const cacheKey = buildAnalyticsCacheKey(startDate, endDate);
+async function getBookingsByDate(startDate, endDate, user = {}) {
+  let agencyId = 'global';
+  let driverIds = [];
+
+  if (user.role === 'agency_admin') {
+    const { Agency, Driver } = require('../models');
+    const agency = await Agency.findOne({ where: { adminId: user.id } });
+    if (!agency) {
+      return [];
+    }
+    agencyId = agency.id;
+    const drivers = await Driver.findAll({ where: { agencyId: agency.id }, attributes: ['id'] });
+    driverIds = drivers.map(d => d.id);
+    if (driverIds.length === 0) {
+      return [];
+    }
+  }
+
+  const cacheKey = buildAnalyticsCacheKey(startDate, endDate, agencyId);
   const cached = await cache.get(cacheKey);
   if (cached) {
     return cached;
@@ -23,6 +40,10 @@ async function getBookingsByDate(startDate, endDate) {
   }
   if (endDate) {
     where.travelDate = { ...(where.travelDate || {}), [Op.lte]: endDate };
+  }
+
+  if (user.role === 'agency_admin') {
+    where.driverId = { [Op.in]: driverIds };
   }
 
   const results = await Booking.findAll({

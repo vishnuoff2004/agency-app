@@ -5,8 +5,10 @@ export async function createBooking(data) {
   return res.data;
 }
 
-export async function getBookings(page = 1, limit = 10) {
-  const res = await api.get('/bookings', { params: { page, limit } });
+export async function getBookings(page = 1, limit = 10, search = '') {
+  const params = { page, limit };
+  if (search) params.search = search;
+  const res = await api.get('/bookings', { params });
   return res.data;
 }
 

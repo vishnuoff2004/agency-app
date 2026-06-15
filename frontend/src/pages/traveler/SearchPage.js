@@ -19,10 +19,16 @@ function SearchPage() {
   const { t } = useTranslation();
   const [source, setSource] = useState('');
   const [destination, setDestination] = useState('');
+  const [seats, setSeats] = useState('');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const debouncedSource = useDebounce(source, 300);
   const debouncedDestination = useDebounce(destination, 300);
+  const debouncedSeats = useDebounce(seats, 300);
+  const debouncedPriceMin = useDebounce(priceMin, 300);
+  const debouncedPriceMax = useDebounce(priceMax, 300);
   const navigate = useNavigate();
   const hasFetched = useRef(false);
 
@@ -36,7 +42,14 @@ function SearchPage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await api.get('/routes/search', { params: { source: debouncedSource, destination: debouncedDestination } });
+        const params = {
+          source: debouncedSource,
+          destination: debouncedDestination,
+        };
+        if (debouncedSeats) params.seats = debouncedSeats;
+        if (debouncedPriceMin) params.priceMin = debouncedPriceMin;
+        if (debouncedPriceMax) params.priceMax = debouncedPriceMax;
+        const res = await api.get('/routes/search', { params });
         if (!cancelled) setResults(res.data.data || []);
       } catch {
         if (!cancelled) setResults([]);
@@ -45,7 +58,7 @@ function SearchPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [debouncedSource, debouncedDestination]);
+  }, [debouncedSource, debouncedDestination, debouncedSeats, debouncedPriceMin, debouncedPriceMax]);
 
   return (
     <div className="search-page">
@@ -73,6 +86,47 @@ function SearchPage() {
               onChange={e => setDestination(e.target.value)}
               aria-label={t('search.to') || 'Destination'}
             />
+          </div>
+        </ScrollReveal>
+
+        <ScrollReveal className="animate-fade-up">
+          <div className="search-filters">
+            <div className="search-filter-group">
+              <label className="search-filter-label">{t('search.seats') || 'Seats'}</label>
+              <input
+                className="form-input"
+                type="number"
+                min="1"
+                placeholder={t('search.seatsPlaceholder') || 'Min seats'}
+                value={seats}
+                onChange={e => setSeats(e.target.value)}
+                aria-label={t('search.seats') || 'Seats'}
+              />
+            </div>
+            <div className="search-filter-group">
+              <label className="search-filter-label">{t('search.minPrice') || 'Min Price'}</label>
+              <input
+                className="form-input"
+                type="number"
+                min="0"
+                placeholder="₹0"
+                value={priceMin}
+                onChange={e => setPriceMin(e.target.value)}
+                aria-label={t('search.minPrice') || 'Min Price'}
+              />
+            </div>
+            <div className="search-filter-group">
+              <label className="search-filter-label">{t('search.maxPrice') || 'Max Price'}</label>
+              <input
+                className="form-input"
+                type="number"
+                min="0"
+                placeholder="₹10000"
+                value={priceMax}
+                onChange={e => setPriceMax(e.target.value)}
+                aria-label={t('search.maxPrice') || 'Max Price'}
+              />
+            </div>
           </div>
         </ScrollReveal>
 
@@ -104,31 +158,69 @@ function SearchPage() {
 
         {results.length > 0 && (
           <div className="search-results animate-stagger revealed">
-            {results.map(r => (
-              <div key={r.id} className="search-result-card">
-                <div className="search-result-route">
-                  <h3>
-                    <span className="search-result-route-icon">📍</span>
-                    {r.source} → {r.destination}
-                  </h3>
-                  <div className="search-result-details">
-                    <span className="search-result-detail">🚗 {r.vehicleType}</span>
-                    <span className="search-result-detail">👤 {r.driverName}</span>
-                    <span className="search-result-detail">🏢 {r.agencyName}</span>
+            {results.map(r => {
+              const depDate = r.departureTime ? new Date(r.departureTime).toISOString().split('T')[0] : '';
+              const isBooked = r.exclusivelyBooked;
+              const isMyBooking = r.bookedByMe;
+
+              return (
+                <div key={r.id} className={`search-result-card${isBooked ? ' search-result-card--booked' : ''}`}>
+                  <div className="search-result-route">
+                    <h3>
+                      <span className="search-result-route-icon">📍</span>
+                      {r.source} → {r.destination}
+                      {isBooked && (
+                        <span className="booking-exclusive-badge" title="This vehicle is exclusively booked by another traveler">
+                          🔒 {t('search.exclusivelyBooked', 'Exclusively Booked')}
+                        </span>
+                      )}
+                      {isMyBooking && !isBooked && (
+                        <span className="booking-mine-badge">
+                          ✓ {t('search.yourBooking', 'Your Booking')}
+                        </span>
+                      )}
+                    </h3>
+                    <div className="search-result-details">
+                      <span className="search-result-detail">🚗 {r.vehicleType}</span>
+                      <span className="search-result-detail">👤 {r.driverName}</span>
+                      <span className="search-result-detail">🏢 {r.agencyName}</span>
+                      <span className="search-result-detail">📅 {new Date(r.departureTime).toLocaleDateString()}</span>
+                      <span className="search-result-detail">🕒 {new Date(r.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    {isBooked && (
+                      <p className="search-result-booked-msg">
+                        {t('search.bookedByOther', 'This vehicle is exclusively reserved by another traveler. Please choose a different route.')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="search-result-actions">
+                    <div className="search-result-price">₹{r.fare}</div>
+                    <div className="search-result-price-label">
+                      {isBooked ? t('search.unavailable', 'Unavailable') : t('search.perSeat', 'per seat')}
+                    </div>
+                    {isBooked ? (
+                      <button className="btn btn-booked-disabled" disabled>
+                        🔒 {t('search.alreadyBooked', 'Already Booked')}
+                      </button>
+                    ) : isMyBooking ? (
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/bookings/new?routeId=${r.id}&driverId=${r.driverId}&date=${depDate}`)}
+                      >
+                        ➕ {t('search.addSeats', 'Add More Seats')}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/bookings/new?routeId=${r.id}&driverId=${r.driverId}&date=${depDate}`)}
+                      >
+                        {t('search.book') || 'Book Now'}
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <div className="search-result-actions">
-                  <div className="search-result-price">₹{r.fare}</div>
-                  <div className="search-result-price-label">per seat</div>
-                  <Button
-                    size="sm"
-                    onClick={() => navigate(`/bookings/new?routeId=${r.id}&driverId=${r.driverId}`)}
-                  >
-                    {t('search.book') || 'Book Now'}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

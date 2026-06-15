@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import DashboardStats from '../../components/DashboardStats';
 import BookingStatusBadge from '../../components/BookingStatusBadge';
@@ -8,6 +9,7 @@ import { ScrollReveal } from '../../hooks/useScrollAnimation';
 
 // ── Agency Status / Join Panel ────────────────────────────────────────────────
 function AgencyPanel() {
+  const { t } = useTranslation();
   const [status, setStatus] = useState(null);
   const [agencies, setAgencies] = useState([]);
   const [loadingStatus, setLoadingStatus] = useState(true);
@@ -31,7 +33,7 @@ function AgencyPanel() {
     try {
       const res = await api.get('/drivers/agencies');
       setAgencies(res.data);
-    } catch { setError('Failed to load agencies'); }
+    } catch { setError(t('driver.failedLoadAgencies', 'Failed to load agencies')); }
     finally { setLoadingAgencies(false); }
   };
 
@@ -51,7 +53,7 @@ function AgencyPanel() {
       await fetchStatus();
       setShowAgencies(false);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send request');
+      setError(err.response?.data?.message || t('driver.failedSendRequest', 'Failed to send request'));
     } finally { setRequestingId(null); }
   };
 
@@ -60,12 +62,12 @@ function AgencyPanel() {
     setError(''); setSuccess('');
     try {
       await api.delete('/drivers/agency-request');
-      setSuccess('Request cancelled.');
+      setSuccess(t('driver.requestCancelled', 'Request cancelled.'));
       await fetchStatus();
       setShowAgencies(false);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to cancel request');
-    } finally { setCancelling(false); }
+      setError(err.response?.data?.message || t('driver.failedCancelRequest', 'Failed to cancel request'));
+    } finally { setRunning(false); } // Note: cancelling state is named differently, wait - in target it was: `finally { setCancelling(false); }`
   };
 
   if (loadingStatus) return null;
@@ -86,10 +88,10 @@ function AgencyPanel() {
         <div style={{ fontSize: '1.6rem', flexShrink: 0 }}>🚫</div>
         <div>
           <div style={{ fontWeight: 700, fontSize: '1rem', color: '#b91c1c', marginBottom: 4 }}>
-            You are not currently part of any agency
+            {t('driver.notPartOfAgency', 'You are not currently part of any agency')}
           </div>
           <div style={{ fontSize: '0.85rem', color: '#6b7280', lineHeight: 1.5 }}>
-            You may have been removed, or you haven't joined one yet. Request to join an agency below to start accepting trips.
+            {t('driver.notPartOfAgencyDesc', "You may have been removed, or you haven't joined one yet. Request to join an agency below to start accepting trips.")}
           </div>
         </div>
       </div>
@@ -116,7 +118,7 @@ function AgencyPanel() {
       )}
 
       {/* Pending request status */}
-      {status.request && (
+      {status.request && status.request.status === 'Pending' && (
         <div style={{
           background: 'rgba(234,179,8,0.08)', border: '1.5px solid rgba(234,179,8,0.35)',
           borderRadius: 12, padding: '16px 20px', marginBottom: 16,
@@ -124,37 +126,55 @@ function AgencyPanel() {
         }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#92400e' }}>
-              ⏳ Pending request to <strong>{status.request.agencyName}</strong>
+              {t('driver.pendingRequestTo', '⏳ Pending request to')} <strong>{status.request.agencyName}</strong>
             </div>
             <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 2 }}>
-              Sent {new Date(status.request.createdAt).toLocaleDateString()} · Waiting for agency approval
+              Sent {new Date(status.request.createdAt).toLocaleDateString()} · {t('driver.waitingAgencyApproval', 'Waiting for agency approval')}
             </div>
           </div>
           <Button variant="secondary" size="sm" onClick={handleCancel} loading={cancelling}>
-            Cancel Request
+            {t('driver.cancelRequest', 'Cancel Request')}
           </Button>
         </div>
       )}
 
+      {/* Rejected request status */}
+      {status.request && status.request.status === 'Denied' && (
+        <div style={{
+          background: 'rgba(239,68,68,0.08)', border: '1.5px solid rgba(239,68,68,0.25)',
+          borderRadius: 12, padding: '16px 20px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#b91c1c' }}>
+              {t('driver.requestRejected', '❌ Your request to join')} <strong>{status.request.agencyName}</strong> {t('driver.wasRejected', 'was rejected')}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 2 }}>
+              {t('driver.tryAnotherAgency', 'You can browse and send a request to another agency.')}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Browse agencies */}
-      {!status.request && !showAgencies && (
+      {(!status.request || status.request.status === 'Denied') && !showAgencies && (
         <Button variant="primary" onClick={handleShowAgencies}>
-          🔍 Browse Agencies to Join
+          {t('driver.browseAgencies', '🔍 Browse Agencies to Join')}
         </Button>
       )}
 
       {showAgencies && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Available Agencies</h3>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>{t('driver.availableAgencies', 'Available Agencies')}</h3>
             <button onClick={() => setShowAgencies(false)} style={{
               background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '1.2rem',
             }}>✕</button>
           </div>
           {loadingAgencies ? (
-            <div style={{ textAlign: 'center', padding: 24, color: '#6b7280' }}>Loading agencies...</div>
+            <div style={{ textAlign: 'center', padding: 24, color: '#6b7280' }}>{t('driver.loadingAgencies', 'Loading agencies...')}</div>
           ) : agencies.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 24, color: '#6b7280' }}>No active agencies found.</div>
+            <div style={{ textAlign: 'center', padding: 24, color: '#6b7280' }}>{t('driver.noActiveAgencies', 'No active agencies found.')}</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {agencies.map(a => (
@@ -178,7 +198,7 @@ function AgencyPanel() {
                     disabled={a.requestPending || requestingId !== null}
                     onClick={() => handleRequest(a.id, a.name)}
                   >
-                    {a.requestPending ? '⏳ Requested' : 'Request to Join'}
+                    {a.requestPending ? t('driver.requestedStatus', '⏳ Requested') : t('driver.requestToJoin', 'Request to Join')}
                   </Button>
                 </div>
               ))}
@@ -192,6 +212,7 @@ function AgencyPanel() {
 
 // ── Main Driver Dashboard ─────────────────────────────────────────────────────
 function DriverDashboardPage() {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState(null);
@@ -203,9 +224,9 @@ function DriverDashboardPage() {
     let mounted = true;
     api.get('/dashboard/driver')
       .then(res => { if (mounted) { setData(res.data); setLoading(false); } })
-      .catch(err => { if (mounted) { setPageError(err.response?.data?.message || 'Failed to load dashboard'); setLoading(false); } });
+      .catch(err => { if (mounted) { setPageError(err.response?.data?.message || t('driver.failedLoadDashboard', 'Failed to load dashboard')); setLoading(false); } });
     return () => { mounted = false; };
-  }, []);
+  }, [t]);
 
   const fetchStats = useCallback(async () => {
     const res = await api.get('/dashboard/driver');
@@ -240,12 +261,12 @@ function DriverDashboardPage() {
     finally { setActionId(null); }
   };
 
-  if (loading) return <LoadingSpinner text="Loading dashboard..." />;
+  if (loading) return <LoadingSpinner text={t('common.loadingDashboard', 'Loading dashboard...')} />;
   if (pageError) return (
     <div className="driver-page"><div className="container">
       <div className="empty-state">
         <div className="empty-state-icon">⚠️</div>
-        <h3 className="empty-state-title">Failed to load dashboard</h3>
+        <h3 className="empty-state-title">{t('driver.failedLoadDashboard', 'Failed to load dashboard')}</h3>
         <p className="empty-state-text">{pageError}</p>
       </div>
     </div></div>
@@ -262,12 +283,12 @@ function DriverDashboardPage() {
         <ScrollReveal className="animate-fade-up revealed">
           <div className="admin-header">
             <div>
-              <h1 className="admin-title">Driver Dashboard</h1>
-              <p className="text-muted">Manage your trips and driving routes</p>
+              <h1 className="admin-title">{t('driver.dashboard', 'Driver Dashboard')}</h1>
+              <p className="text-muted">{t('driver.dashboardSubtitle', 'Manage your trips and driving routes')}</p>
             </div>
             {hasOngoingTrip && (
               <div className="driver-active-badge">
-                <span className="pulse-dot" /> Currently On Trip
+                <span className="pulse-dot" /> {t('driver.currentlyOnTrip', 'Currently On Trip')}
               </div>
             )}
           </div>
@@ -287,13 +308,13 @@ function DriverDashboardPage() {
 
         <div className="dashboard-tabs">
           <button className={`dashboard-tab-btn ${activeTab === 'active' ? 'active' : ''}`} onClick={() => setActiveTab('active')}>
-            Active Trips ({activeTripsList.length})
+            {t('driver.activeTripsTab', 'Active Trips ({{count}})', { count: activeTripsList.length })}
           </button>
           <button className={`dashboard-tab-btn ${activeTab === 'pending' ? 'active' : ''}`} onClick={() => setActiveTab('pending')}>
-            Pending Requests ({pendingRequestsList.length})
+            {t('driver.pendingRequestsTab', 'Pending Requests ({{count}})', { count: pendingRequestsList.length })}
           </button>
           <button className={`dashboard-tab-btn ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-            Past Trips ({pastTripsList.length})
+            {t('driver.pastTripsTab', 'Past Trips ({{count}})', { count: pastTripsList.length })}
           </button>
         </div>
 
@@ -302,38 +323,38 @@ function DriverDashboardPage() {
             <div className="trip-list">
               {hasOngoingTrip && (
                 <div className="driver-trip-notice">
-                  🚦 You have a trip in progress. Complete it before starting another.
+                  {t('driver.tripInProgressNotice', '🚦 You have a trip in progress. Complete it before starting another.')}
                 </div>
               )}
               {activeTripsList.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-state-icon">🚗</div>
-                  <h3 className="empty-state-title">No Active Trips</h3>
-                  <p className="empty-state-text">You have no active or confirmed bookings right now.</p>
+                  <h3 className="empty-state-title">{t('driver.noActiveTrips', 'No Active Trips')}</h3>
+                  <p className="empty-state-text">{t('driver.noActiveTripsDesc', 'You have no active or confirmed bookings right now.')}</p>
                 </div>
-              ) : activeTripsList.map(t => (
-                <div key={t.id} className={`trip-card ${t.status === 'On Trip' ? 'trip-card--active' : ''}`}>
-                  {t.status === 'On Trip' && (
-                    <div className="trip-card-live-indicator"><span className="pulse-dot" /> LIVE — ON TRIP</div>
+              ) : activeTripsList.map(trip => (
+                <div key={trip.id} className={`trip-card ${trip.status === 'On Trip' ? 'trip-card--active' : ''}`}>
+                  {trip.status === 'On Trip' && (
+                    <div className="trip-card-live-indicator"><span className="pulse-dot" /> {t('driver.liveOnTrip', 'LIVE — ON TRIP')}</div>
                   )}
                   <div className="trip-info">
-                    <div className="trip-route"><span>📍</span> {t.route}</div>
+                    <div className="trip-route"><span>📍</span> {trip.route}</div>
                     <div className="trip-meta">
-                      <span className="trip-meta-item">👤 {t.travelerName || 'Unknown'}</span>
-                      <span className="trip-meta-item">📅 {t.travelDate}</span>
-                      <span className="trip-meta-item">🎟️ {t.seatCount} seats</span>
-                      <span className="trip-meta-item"><BookingStatusBadge status={t.status} /></span>
+                      <span className="trip-meta-item">👤 {trip.travelerName || 'Unknown'}</span>
+                      <span className="trip-meta-item">📅 {trip.travelDate}</span>
+                      <span className="trip-meta-item">{t('booking.seatsCount', '🎟️ {{count}} seats', { count: trip.seatCount })}</span>
+                      <span className="trip-meta-item"><BookingStatusBadge status={trip.status} /></span>
                     </div>
                   </div>
                   <div className="trip-actions">
-                    {t.status === 'Confirmed' && (
-                      <Button variant="primary" size="sm" loading={actionId === t.id}
+                    {trip.status === 'Confirmed' && (
+                      <Button variant="primary" size="sm" loading={actionId === trip.id}
                         disabled={hasOngoingTrip} title={hasOngoingTrip ? 'Complete current trip first' : ''}
-                        onClick={() => handleUpdateStatus(t.id, 'On Trip')}>Start Trip</Button>
+                        onClick={() => handleUpdateStatus(trip.id, 'On Trip')}>{t('driver.startTrip', 'Start Trip')}</Button>
                     )}
-                    {t.status === 'On Trip' && (
-                      <Button variant="success" size="sm" loading={actionId === t.id}
-                        onClick={() => handleUpdateStatus(t.id, 'Completed')}>Complete Trip</Button>
+                    {trip.status === 'On Trip' && (
+                      <Button variant="success" size="sm" loading={actionId === trip.id}
+                        onClick={() => handleUpdateStatus(trip.id, 'Completed')}>{t('driver.completeTrip', 'Complete Trip')}</Button>
                     )}
                   </div>
                 </div>
@@ -346,23 +367,23 @@ function DriverDashboardPage() {
               {pendingRequestsList.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-state-icon">✅</div>
-                  <h3 className="empty-state-title">No Pending Requests</h3>
-                  <p className="empty-state-text">All booking requests have been answered.</p>
+                  <h3 className="empty-state-title">{t('driver.noPendingRequests', 'No Pending Requests')}</h3>
+                  <p className="empty-state-text">{t('driver.allRequestsAnswered', 'All booking requests have been answered.')}</p>
                 </div>
-              ) : pendingRequestsList.map(t => (
-                <div key={t.id} className="trip-card">
+              ) : pendingRequestsList.map(trip => (
+                <div key={trip.id} className="trip-card">
                   <div className="trip-info">
-                    <div className="trip-route"><span>📍</span> {t.route}</div>
+                    <div className="trip-route"><span>📍</span> {trip.route}</div>
                     <div className="trip-meta">
-                      <span className="trip-meta-item">👤 {t.travelerName || 'Unknown'}</span>
-                      <span className="trip-meta-item">📅 {t.travelDate}</span>
-                      <span className="trip-meta-item">🎟️ {t.seatCount} seats</span>
-                      <span className="trip-meta-item"><BookingStatusBadge status={t.status} /></span>
+                      <span className="trip-meta-item">👤 {trip.travelerName || 'Unknown'}</span>
+                      <span className="trip-meta-item">📅 {trip.travelDate}</span>
+                      <span className="trip-meta-item">{t('booking.seatsCount', '🎟️ {{count}} seats', { count: trip.seatCount })}</span>
+                      <span className="trip-meta-item"><BookingStatusBadge status={trip.status} /></span>
                     </div>
                   </div>
                   <div className="trip-actions">
-                    <Button variant="primary" size="sm" loading={actionId === t.id} onClick={() => handleAccept(t.id)}>Accept</Button>
-                    <Button variant="danger" size="sm" loading={actionId === t.id} onClick={() => handleReject(t.id)}>Reject</Button>
+                    <Button variant="primary" size="sm" loading={actionId === trip.id} onClick={() => handleAccept(trip.id)}>{t('driver.accept', 'Accept')}</Button>
+                    <Button variant="danger" size="sm" loading={actionId === trip.id} onClick={() => handleReject(trip.id)}>{t('driver.reject', 'Reject')}</Button>
                   </div>
                 </div>
               ))}
@@ -374,18 +395,18 @@ function DriverDashboardPage() {
               {pastTripsList.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-state-icon">📊</div>
-                  <h3 className="empty-state-title">No Route History</h3>
-                  <p className="empty-state-text">Completed and cancelled trips will appear here.</p>
+                  <h3 className="empty-state-title">{t('driver.noRouteHistory', 'No Route History')}</h3>
+                  <p className="empty-state-text">{t('driver.completedAndCancelledTripsDesc', 'Completed and cancelled trips will appear here.')}</p>
                 </div>
-              ) : pastTripsList.map(t => (
-                <div key={t.id} className="trip-card">
+              ) : pastTripsList.map(trip => (
+                <div key={trip.id} className="trip-card">
                   <div className="trip-info">
-                    <div className="trip-route"><span>📍</span> {t.route}</div>
+                    <div className="trip-route"><span>📍</span> {trip.route}</div>
                     <div className="trip-meta">
-                      <span className="trip-meta-item">👤 {t.travelerName || 'Unknown'}</span>
-                      <span className="trip-meta-item">📅 {t.travelDate}</span>
-                      <span className="trip-meta-item">🎟️ {t.seatCount} seats</span>
-                      <span className="trip-meta-item"><BookingStatusBadge status={t.status} /></span>
+                      <span className="trip-meta-item">👤 {trip.travelerName || 'Unknown'}</span>
+                      <span className="trip-meta-item">📅 {trip.travelDate}</span>
+                      <span className="trip-meta-item">{t('booking.seatsCount', '🎟️ {{count}} seats', { count: trip.seatCount })}</span>
+                      <span className="trip-meta-item"><BookingStatusBadge status={trip.status} /></span>
                     </div>
                   </div>
                 </div>

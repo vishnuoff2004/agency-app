@@ -86,14 +86,24 @@ async function removeDriver(userId, driverId) {
   return { message: 'Driver removed from agency' };
 }
 
-async function getDrivers(userId, page = 1, limit = 20) {
+async function getDrivers(userId, page = 1, limit = 20, search = '') {
   const agency = await getOrCreateAgency(userId);
   if (!agency) {
     return { agencyName: null, data: [], page, limit, totalPages: 0, totalItems: 0 };
   }
   const offset = (page - 1) * limit;
+  const where = { agencyId: agency.id };
+  if (search) {
+    where[Op.or] = [
+      { name: { [Op.like]: `%${search}%` } },
+      { phone: { [Op.like]: `%${search}%` } },
+      { vehicleType: { [Op.like]: `%${search}%` } },
+      { vehicleReg: { [Op.like]: `%${search}%` } },
+      { licenseNo: { [Op.like]: `%${search}%` } },
+    ];
+  }
   const { count, rows } = await Driver.findAndCountAll({
-    where: { agencyId: agency.id },
+    where,
     attributes: ['id', 'name', 'phone', 'vehicleType', 'vehicleReg', 'licenseNo', 'available'],
     limit,
     offset,
@@ -111,29 +121,90 @@ async function getDrivers(userId, page = 1, limit = 20) {
 async function getBookings(userId, filters = {}) {
   const agency = await getOrCreateAgency(userId);
   if (!agency) {
-    return { data: [] };
+    return { data: [], page: 1, limit: 10, totalPages: 0, totalItems: 0 };
   }
-  const driverIds = await Driver.findAll({ where: { agencyId: agency.id }, attributes: ['id'] });
-  const ids = driverIds.map(d => d.id);
+  const driverRecords = await Driver.findAll({ where: { agencyId: agency.id }, attributes: ['id'] });
+  const ids = driverRecords.map(d => d.id);
+  if (ids.length === 0) {
+    return { data: [], page: 1, limit: 10, totalPages: 0, totalItems: 0 };
+  }
+  
+  const page = parseInt(filters.page) || 1;
+  const limit = parseInt(filters.limit) || 10;
+  const offset = (page - 1) * limit;
+
   const where = { driverId: { [Op.in]: ids } };
   if (filters.status) where.status = filters.status;
   if (filters.fromDate && filters.toDate) {
     where.travelDate = { [Op.between]: [filters.fromDate, filters.toDate] };
   }
-  const bookings = await Booking.findAll({
+
+  const search = filters.search || '';
+  if (search) {
+    where[Op.or] = [
+      { id: { [Op.like]: `%${search}%` } },
+      { status: { [Op.like]: `%${search}%` } },
+      { '$User.name$': { [Op.like]: `%${search}%` } },
+      { '$User.email$': { [Op.like]: `%${search}%` } },
+      { '$User.phone$': { [Op.like]: `%${search}%` } },
+      { '$Driver.name$': { [Op.like]: `%${search}%` } },
+      { '$Route.source$': { [Op.like]: `%${search}%` } },
+      { '$Route.destination$': { [Op.like]: `%${search}%` } },
+    ];
+  }
+
+  const { count, rows } = await Booking.findAndCountAll({
     where,
-    include: [{ model: User, attributes: ['name'] }, { model: Driver, attributes: ['name'] }, { model: Route }],
+    include: [
+      { model: User, attributes: ['name', 'email', 'phone'] },
+      {
+        model: Driver,
+        attributes: ['name', 'phone', 'vehicleType', 'vehicleReg', 'licenseNo'],
+        include: [{ model: Agency, attributes: ['name', 'phone', 'email'] }],
+      },
+      { model: Route, attributes: ['source', 'destination', 'departureTime', 'arrivalTime', 'fare'] },
+    ],
     order: [['createdAt', 'DESC']],
+    limit,
+    offset,
+    subQuery: false,
   });
-  const data = bookings.map(b => ({
+
+  const data = rows.map(b => ({
     bookingId: b.id,
-    travelerName: b.User ? b.User.name : null,
-    route: b.Route ? `${b.Route.source} → ${b.Route.destination}` : null,
-    driverName: b.Driver ? b.Driver.name : null,
     status: b.status,
-    fare: b.Route ? b.Route.fare : null,
+    seatCount: b.seatCount,
+    travelDate: b.travelDate,
+    createdAt: b.createdAt,
+    cancelReason: b.cancelReason,
+    // Traveler
+    travelerName: b.User?.name || null,
+    travelerEmail: b.User?.email || null,
+    travelerPhone: b.User?.phone || null,
+    // Route
+    route: b.Route ? `${b.Route.source} → ${b.Route.destination}` : null,
+    routeSource: b.Route?.source || null,
+    routeDestination: b.Route?.destination || null,
+    routeDeparture: b.Route?.departureTime || null,
+    routeArrival: b.Route?.arrivalTime || null,
+    fare: b.Route?.fare || null,
+    totalAmount: b.Route?.fare ? (Number(b.Route.fare) * b.seatCount).toFixed(2) : null,
+    // Driver
+    driverName: b.Driver?.name || null,
+    driverPhone: b.Driver?.phone || null,
+    vehicleType: b.Driver?.vehicleType || null,
+    vehicleReg: b.Driver?.vehicleReg || null,
+    // Agency
+    agencyName: b.Driver?.Agency?.name || null,
   }));
-  return { data };
+
+  return {
+    data,
+    page,
+    limit,
+    totalPages: Math.ceil(count / limit),
+    totalItems: count,
+  };
 }
 
 module.exports = { addDriver, removeDriver, getDrivers, getBookings };

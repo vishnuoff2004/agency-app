@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getUsers, toggleUserStatus } from '../../services/adminService';
 import Button from '../../components/common/Button';
 import Pagination from '../../components/common/Pagination';
@@ -6,6 +7,7 @@ import { ScrollReveal } from '../../hooks/useScrollAnimation';
 import { SkeletonList } from '../../components/common/SkeletonLoader';
 
 function UserManagementPage() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -13,18 +15,28 @@ function UserManagementPage() {
   const [toggleError, setToggleError] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   useEffect(() => {
     setLoading(true);
     setError('');
-    getUsers()
+    getUsers(page, 10, debouncedSearch)
       .then(data => {
         setUsers(Array.isArray(data) ? data : data.data || []);
         setTotalPages(data.totalPages || 0);
       })
-      .catch(() => setError('Failed to load users'))
+      .catch(() => setError(t('admin.errorLoadingUsers', 'Failed to load users')))
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, debouncedSearch]);
 
   const handleToggle = async (id) => {
     setToggling(id);
@@ -33,22 +45,11 @@ function UserManagementPage() {
       await toggleUserStatus(id);
       setUsers(prev => prev.map(u => u.id === id ? { ...u, active: !u.active } : u));
     } catch (err) {
-      setToggleError(err.response?.data?.message || 'Failed to update user status');
+      setToggleError(err.response?.data?.message || t('admin.errorUpdateUserStatus', 'Failed to update user status'));
     } finally {
       setToggling(null);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="admin-page">
-        <div className="container">
-          <h1 className="admin-title mb-lg">User Management</h1>
-          <SkeletonList rows={8} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="admin-page">
@@ -56,22 +57,32 @@ function UserManagementPage() {
         <ScrollReveal className="animate-fade-up">
           <div className="admin-header">
             <div>
-              <h1 className="admin-title">User Management</h1>
-              <p className="text-muted">{users.length} users on the platform</p>
+              <h1 className="admin-title">{t('admin.userManagement', 'User Management')}</h1>
+              <p className="text-muted">{t('admin.usersCount', '{{count}} users on the platform', { count: users.length })}</p>
             </div>
+            <input
+              className="form-input"
+              style={{ maxWidth: 280 }}
+              placeholder={t('admin.searchUsers', 'Search by name, email, phone, role…')}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
         </ScrollReveal>
 
         {error ? (
           <div className="error-state">
             <div className="error-state-icon">✕</div>
-            <h3>Error Loading Users</h3>
+            <h3>{t('admin.errorLoadingUsers', 'Error Loading Users')}</h3>
             <p className="text-muted mt-sm">{error}</p>
           </div>
+        ) : loading ? (
+          <SkeletonList rows={8} />
         ) : users.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">👥</div>
-            <h3 className="empty-state-title">No Users Found</h3>
+            <h3 className="empty-state-title">{t('admin.noUsersFound', 'No Users Found')}</h3>
+            <p className="empty-state-text">{search ? 'No users match your search.' : t('admin.noUsersRegistered', 'No users are registered yet.')}</p>
           </div>
         ) : (
           <ScrollReveal className="animate-fade-up">
@@ -84,10 +95,10 @@ function UserManagementPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>User</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{t('admin.user', 'User')}</th>
+                    <th>{t('admin.email', 'Email')}</th>
+                    <th>{t('agency.status', 'Status')}</th>
+                    <th>{t('common.actions', 'Actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -105,7 +116,7 @@ function UserManagementPage() {
                       <td>
                         <span className="user-list-item-status">
                           <span className={`status-dot ${u.active ? 'active' : 'inactive'}`} />
-                          {u.active ? 'Active' : 'Inactive'}
+                          {u.active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
                         </span>
                       </td>
                       <td>
@@ -115,7 +126,7 @@ function UserManagementPage() {
                           loading={toggling === u.id}
                           onClick={() => handleToggle(u.id)}
                         >
-                          {u.active ? 'Deactivate' : 'Activate'}
+                          {u.active ? t('agency.deactivate', 'Deactivate') : t('agency.activate', 'Activate')}
                         </Button>
                       </td>
                     </tr>

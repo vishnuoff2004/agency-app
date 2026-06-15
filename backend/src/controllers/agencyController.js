@@ -29,7 +29,8 @@ async function getDrivers(req, res, next) {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const result = await agencyService.getDrivers(req.user.id, page, limit);
+    const search = req.query.search || '';
+    const result = await agencyService.getDrivers(req.user.id, page, limit, search);
     res.json(result);
   } catch (err) {
     next(err);

@@ -23,9 +23,39 @@ module.exports = (sequelize, DataTypes) => {
       active: { type: DataTypes.BOOLEAN, defaultValue: true },
       loginAttempts: { type: DataTypes.INTEGER, defaultValue: 0 },
       lockedUntil: { type: DataTypes.DATE, allowNull: true },
+      otpCode: { type: DataTypes.STRING(6), allowNull: true },
+      otpExpiry: { type: DataTypes.DATE, allowNull: true },
+      isVerified: { type: DataTypes.BOOLEAN, defaultValue: false },
     },
     { sequelize, modelName: 'User', timestamps: true }
   );
+
+  User.addHook('afterCreate', (user) => {
+    try {
+      const { syncUserToAlgolia } = require('../utils/algoliaSync');
+      syncUserToAlgolia(user.id);
+    } catch (err) {
+      console.error('Error in User afterCreate hook:', err.message);
+    }
+  });
+
+  User.addHook('afterUpdate', (user) => {
+    try {
+      const { syncUserToAlgolia } = require('../utils/algoliaSync');
+      syncUserToAlgolia(user.id);
+    } catch (err) {
+      console.error('Error in User afterUpdate hook:', err.message);
+    }
+  });
+
+  User.addHook('afterDestroy', (user) => {
+    try {
+      const { deleteUserFromAlgolia } = require('../utils/algoliaSync');
+      deleteUserFromAlgolia(user.id);
+    } catch (err) {
+      console.error('Error in User afterDestroy hook:', err.message);
+    }
+  });
 
   return User;
 };

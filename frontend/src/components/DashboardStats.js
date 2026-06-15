@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SkeletonStats } from './common/SkeletonLoader';
 
 const icons = {
@@ -14,6 +15,7 @@ const icons = {
 };
 
 export default function DashboardStats({ fetchStats, interval = 30000 }) {
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +54,8 @@ export default function DashboardStats({ fetchStats, interval = 30000 }) {
   return (
     <div className="stats-grid" role="region" aria-label="Dashboard statistics" aria-live="polite">
       {Object.entries(stats).filter(([, v]) => typeof v !== 'object').map(([key, value]) => {
-        const label = key.replace(/([A-Z])/g, ' $1').trim();
+        const defaultLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+        const label = t('stats.' + key, defaultLabel);
         const icon = icons[key] || '📊';
         return (
           <div key={key} className="stat-card">

@@ -1,9 +1,15 @@
 const { Agency, Driver, Booking } = require('../models');
 
-async function getAgencyPerformance(page = 1, pageSize = 10) {
+async function getAgencyPerformance(page = 1, pageSize = 10, user = {}) {
   const offset = (page - 1) * pageSize;
 
+  const where = {};
+  if (user.role === 'agency_admin') {
+    where.adminId = user.id;
+  }
+
   const { count, rows: agencies } = await Agency.findAndCountAll({
+    where,
     include: [
       {
         model: Driver,

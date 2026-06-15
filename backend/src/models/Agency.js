@@ -21,5 +21,32 @@ module.exports = (sequelize, DataTypes) => {
     { sequelize, modelName: 'Agency', timestamps: true }
   );
 
+  Agency.addHook('afterCreate', (agency) => {
+    try {
+      const { syncAgencyToAlgolia } = require('../utils/algoliaSync');
+      syncAgencyToAlgolia(agency.id);
+    } catch (err) {
+      console.error('Error in Agency afterCreate hook:', err.message);
+    }
+  });
+
+  Agency.addHook('afterUpdate', (agency) => {
+    try {
+      const { syncAgencyToAlgolia } = require('../utils/algoliaSync');
+      syncAgencyToAlgolia(agency.id);
+    } catch (err) {
+      console.error('Error in Agency afterUpdate hook:', err.message);
+    }
+  });
+
+  Agency.addHook('afterDestroy', (agency) => {
+    try {
+      const { deleteAgencyFromAlgolia } = require('../utils/algoliaSync');
+      deleteAgencyFromAlgolia(agency.id);
+    } catch (err) {
+      console.error('Error in Agency afterDestroy hook:', err.message);
+    }
+  });
+
   return Agency;
 };

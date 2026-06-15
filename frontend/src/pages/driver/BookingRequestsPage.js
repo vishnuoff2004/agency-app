@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import Button from '../../components/common/Button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { ScrollReveal } from '../../hooks/useScrollAnimation';
 
 function BookingRequestsPage() {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState(null);
@@ -29,7 +31,7 @@ function BookingRequestsPage() {
     }
   };
 
-  if (loading) return <LoadingSpinner text="Loading requests..." />;
+  if (loading) return <LoadingSpinner text={t('driver.loadingRequests', 'Loading requests...')} />;
 
   return (
     <div className="driver-page">
@@ -37,8 +39,8 @@ function BookingRequestsPage() {
         <ScrollReveal className="animate-fade-up">
           <div className="admin-header">
             <div>
-              <h1 className="admin-title">Booking Requests</h1>
-              <p className="text-muted">{requests.length} pending requests</p>
+              <h1 className="admin-title">{t('driver.requests', 'Booking Requests')}</h1>
+              <p className="text-muted">{t('driver.pendingRequestsCount', '{{count}} pending requests', { count: requests.length })}</p>
             </div>
           </div>
         </ScrollReveal>
@@ -46,8 +48,8 @@ function BookingRequestsPage() {
         {requests.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">✅</div>
-            <h3 className="empty-state-title">All Clear</h3>
-            <p className="empty-state-text">No pending booking requests at this time.</p>
+            <h3 className="empty-state-title">{t('driver.allClear', 'All Clear')}</h3>
+            <p className="empty-state-text">{t('driver.noPendingRequests', 'No pending booking requests at this time.')}</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -55,10 +57,10 @@ function BookingRequestsPage() {
               <ScrollReveal key={r.id || i} className="animate-fade-up">
                 <div className="booking-request-card">
                   <div className="booking-request-info">
-                    <div className="booking-request-title">Booking Request</div>
+                    <div className="booking-request-title">{t('driver.bookingRequest', 'Booking Request')}</div>
                     <div className="booking-request-meta">
-                      {r.travelerName && <span>From: {r.travelerName} | </span>}
-                      {r.route && <span>Route: {r.route}</span>}
+                      {r.travelerName && <span>{t('driver.from', 'From: ')}{r.travelerName} | </span>}
+                      {r.route && <span>{t('driver.route', 'Route: ')}{r.route}</span>}
                     </div>
                   </div>
                   <div className="booking-request-actions">
@@ -68,7 +70,7 @@ function BookingRequestsPage() {
                       loading={actionId === r.id}
                       onClick={() => handleAction(r.id, 'accept')}
                     >
-                      Accept
+                      {t('driver.accept', 'Accept')}
                     </Button>
                     <Button
                       variant="danger"
@@ -76,7 +78,7 @@ function BookingRequestsPage() {
                       loading={actionId === r.id}
                       onClick={() => handleAction(r.id, 'reject')}
                     >
-                      Reject
+                      {t('driver.reject', 'Reject')}
                     </Button>
                   </div>
                 </div>

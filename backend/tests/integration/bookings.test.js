@@ -32,6 +32,16 @@ describe('Booking APIs (REQ-008 to REQ-011, REQ-039 to REQ-041)', () => {
     expect(res.status).toBe(409);
   });
 
+  test('POST /api/bookings with incorrect date should return 400', async () => {
+    bookingService.createBooking.mockRejectedValue({ status: 400, message: 'Booking date must match the route departure date' });
+    const res = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${travelerToken}`)
+      .send({ routeId: 1, driverId: 1, seatCount: 1, travelDate: '2026-07-16' });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('message', 'Booking date must match the route departure date');
+  });
+
   test('GET /api/bookings should return 200 — TEST-032', async () => {
     bookingService.getUserBookings.mockResolvedValue({ data: [], page: 1, limit: 10, totalPages: 0, totalItems: 0 });
     const res = await request(app)

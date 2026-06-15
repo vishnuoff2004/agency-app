@@ -13,8 +13,8 @@ INSERT INTO drivers (userId, agencyId, name, phone, vehicleType, vehicleReg, lic
 (2, 2, 'Amit Singh', '+911111111113', 'Hatchback', 'MH02EF9012', 'DL345678', true, NOW(), NOW()),
 (2, 2, 'Priya Patel', '+911111111114', 'Van', 'MH02GH3456', 'DL901234', true, NOW(), NOW());
 
-INSERT INTO routes (driverId, source, destination, departureTime, arrivalTime, fare, capacity, available, createdAt, updatedAt) VALUES
-(1, 'Mumbai', 'Pune', '2026-07-15 08:00:00', '2026-07-15 10:00:00', 500.00, 4, true, NOW(), NOW()),
-(1, 'Mumbai', 'Nashik', '2026-07-15 14:00:00', '2026-07-15 17:00:00', 800.00, 4, true, NOW(), NOW()),
-(2, 'Pune', 'Mumbai', '2026-07-16 09:00:00', '2026-07-16 11:00:00', 550.00, 6, true, NOW(), NOW()),
-(2, 'Pune', 'Goa', '2026-07-17 06:00:00', '2026-07-17 14:00:00', 1200.00, 4, true, NOW(), NOW());
+INSERT INTO routes (driverId, source, destination, departureTime, arrivalTime, fare, capacity, available, status, createdAt, updatedAt) VALUES
+(1, 'Mumbai', 'Pune', '2026-07-15 08:00:00', '2026-07-15 10:00:00', 500.00, 4, true, 'active', NOW(), NOW()),
+(1, 'Mumbai', 'Nashik', '2026-07-15 14:00:00', '2026-07-15 17:00:00', 800.00, 4, true, 'active', NOW(), NOW()),
+(2, 'Pune', 'Mumbai', '2026-07-16 09:00:00', '2026-07-16 11:00:00', 550.00, 6, true, 'active', NOW(), NOW()),
+(2, 'Pune', 'Goa', '2026-07-17 06:00:00', '2026-07-17 14:00:00', 1200.00, 4, true, 'active', NOW(), NOW());

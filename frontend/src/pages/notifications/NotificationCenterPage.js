@@ -93,8 +93,8 @@ function NotificationCenterPage() {
                     {n.isRead ? '📩' : '📬'}
                   </div>
                   <div className="notification-item-content">
-                    <div className="notification-item-title">{n.title}</div>
-                    <div className="notification-item-body">{n.body}</div>
+                    <div className="notification-item-title">{t(n.title)}</div>
+                    <div className="notification-item-body">{t(n.body)}</div>
                     <div className="notification-item-time">{new Date(n.createdAt).toLocaleString()}</div>
                   </div>
                   {!n.isRead && <div className="notification-unread-dot" />}

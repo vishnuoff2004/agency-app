@@ -1,7 +1,7 @@
 const { Driver, Agency, DriverAgencyRequest, Sequelize } = require('../models');
 const { Op } = Sequelize;
 
-// Driver gets their own agency status + any pending request
+// Driver gets their own agency status + their latest request status
 async function getMyAgencyStatus(userId) {
   const driver = await Driver.findOne({
     where: { userId },
@@ -12,22 +12,23 @@ async function getMyAgencyStatus(userId) {
     return { hasProfile: false, agency: null, request: null };
   }
 
-  const pendingRequest = await DriverAgencyRequest.findOne({
-    where: { driverId: driver.id, status: 'Pending' },
+  const latestRequest = await DriverAgencyRequest.findOne({
+    where: { driverId: driver.id },
     include: [{ model: Agency, attributes: ['id', 'name', 'email', 'phone'] }],
+    order: [['createdAt', 'DESC']],
   });
 
   return {
     hasProfile: true,
     driverId: driver.id,
     agency: driver.Agency || null,
-    request: pendingRequest
+    request: latestRequest
       ? {
-          id: pendingRequest.id,
-          agencyId: pendingRequest.agencyId,
-          agencyName: pendingRequest.Agency?.name,
-          status: pendingRequest.status,
-          createdAt: pendingRequest.createdAt,
+          id: latestRequest.id,
+          agencyId: latestRequest.agencyId,
+          agencyName: latestRequest.Agency?.name,
+          status: latestRequest.status,
+          createdAt: latestRequest.createdAt,
         }
       : null,
   };
@@ -132,17 +133,17 @@ async function cancelJoinRequest(userId) {
   return { message: 'Request cancelled' };
 }
 
-// Agency admin: get all pending join requests for their agency
+// Agency admin: get all join requests for their agency
 async function getAgencyRequests(adminUserId) {
   const agency = await Agency.findOne({ where: { adminId: adminUserId } });
   if (!agency) return [];
 
   const requests = await DriverAgencyRequest.findAll({
-    where: { agencyId: agency.id, status: 'Pending' },
+    where: { agencyId: agency.id },
     include: [
       {
         model: Driver,
-        attributes: ['id', 'name', 'phone', 'vehicleType', 'vehicleReg', 'licenseNo', 'available'],
+        attributes: ['id', 'name', 'phone', 'vehicleType', 'vehicleReg', 'licenseNo', 'licenseDocUrl', 'vehicleRcUrl', 'available'],
       },
     ],
     order: [['createdAt', 'DESC']],
@@ -156,6 +157,8 @@ async function getAgencyRequests(adminUserId) {
     vehicleType: r.Driver?.vehicleType,
     vehicleReg: r.Driver?.vehicleReg,
     licenseNo: r.Driver?.licenseNo,
+    licenseDocUrl: r.Driver?.licenseDocUrl,
+    vehicleRcUrl: r.Driver?.vehicleRcUrl,
     available: r.Driver?.available,
     status: r.status,
     requestedAt: r.createdAt,

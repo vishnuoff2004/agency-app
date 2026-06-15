@@ -5,6 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 jest.mock('../services/api');
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key, i18n: { language: 'en', changeLanguage: jest.fn() } }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => {},
+  },
 }));
 
 const mockAuthState = { user: null, token: null, loading: false };
@@ -13,12 +17,16 @@ jest.mock('../contexts/AuthContext', () => ({
   AuthProvider: ({ children }) => <>{children}</>,
 }));
 
+import { LanguageProvider } from '../contexts/LanguageContext';
+
 const AppRoutes = require('../AppRoutes').default;
 
 function renderApp(initialRoute) {
   return render(
     <MemoryRouter initialEntries={[initialRoute]}>
-      <AppRoutes />
+      <LanguageProvider>
+        <AppRoutes />
+      </LanguageProvider>
     </MemoryRouter>
   );
 }
@@ -37,12 +45,14 @@ describe('Route Configuration — REQ-053', () => {
 
   test('TEST-188: root route redirects authenticated users to search', () => {
     mockAuthState.token = 'valid';
+    mockAuthState.user = { role: 'traveler' };
     renderApp('/');
     expect(screen.getByText('search.title')).toBeInTheDocument();
   });
 
   test('TEST-189: wildcard route redirects authenticated users to search', () => {
     mockAuthState.token = 'valid';
+    mockAuthState.user = { role: 'traveler' };
     renderApp('/nonexistent');
     expect(screen.getByText('search.title')).toBeInTheDocument();
   });

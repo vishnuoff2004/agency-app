@@ -28,5 +28,32 @@ module.exports = (sequelize, DataTypes) => {
     { sequelize, modelName: 'Booking', timestamps: true }
   );
 
+  Booking.addHook('afterCreate', (booking) => {
+    try {
+      const { syncBookingToAlgolia } = require('../utils/algoliaSync');
+      syncBookingToAlgolia(booking.id);
+    } catch (err) {
+      console.error('Error in Booking afterCreate hook:', err.message);
+    }
+  });
+
+  Booking.addHook('afterUpdate', (booking) => {
+    try {
+      const { syncBookingToAlgolia } = require('../utils/algoliaSync');
+      syncBookingToAlgolia(booking.id);
+    } catch (err) {
+      console.error('Error in Booking afterUpdate hook:', err.message);
+    }
+  });
+
+  Booking.addHook('afterDestroy', (booking) => {
+    try {
+      const { deleteBookingFromAlgolia } = require('../utils/algoliaSync');
+      deleteBookingFromAlgolia(booking.id);
+    } catch (err) {
+      console.error('Error in Booking afterDestroy hook:', err.message);
+    }
+  });
+
   return Booking;
 };

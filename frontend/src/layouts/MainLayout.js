@@ -58,7 +58,7 @@ function MainLayout() {
           <>
             <Link className={`navbar-link ${isActive('/agency/dashboard') ? 'active' : ''}`} to="/agency/dashboard">{t('nav.dashboard')}</Link>
             <Link className={`navbar-link ${isActive('/agency/drivers') ? 'active' : ''}`} to="/agency/drivers">{t('nav.drivers') || 'Drivers'}</Link>
-            <Link className={`navbar-link ${isActive('/agency/requests') ? 'active' : ''}`} to="/agency/requests">Driver Requests</Link>
+            <Link className={`navbar-link ${isActive('/agency/requests') ? 'active' : ''}`} to="/agency/requests">{t('agency.driverRequests', 'Driver Requests')}</Link>
             <Link className={`navbar-link ${isActive('/agency/bookings') ? 'active' : ''}`} to="/agency/bookings">{t('nav.bookings')}</Link>
             <Link className={`navbar-link ${isActive('/analytics') ? 'active' : ''}`} to="/analytics">{t('nav.analytics')}</Link>
           </>
@@ -88,14 +88,11 @@ function MainLayout() {
         <div className="navbar-inner">
           <Link className="navbar-logo" to="/search">
             <span className="navbar-logo-icon">TP</span>
-            <span>TravelPro</span>
+            <span>{t('footer.travelPro', 'TravelPro')}</span>
           </Link>
 
           <div className={`navbar-links ${mobileOpen ? 'mobile-open' : ''}`}>
             {roleLinks()}
-            <Link className={`navbar-link ${isActive('/notifications') ? 'active' : ''}`} to="/notifications">
-              {t('nav.notifications')}
-            </Link>
           </div>
 
           <div className="navbar-right">
@@ -116,9 +113,6 @@ function MainLayout() {
                   <div className="navbar-dropdown-header-name">{user?.name || 'User'}</div>
                   <div className="navbar-dropdown-header-role">{user?.role}</div>
                 </div>
-                <Link className="navbar-dropdown-item" to="/notifications">
-                  {t('nav.notifications')}
-                </Link>
                 <button className="navbar-dropdown-item danger" onClick={handleLogout}>
                   {t('nav.logout')}
                 </button>
@@ -153,44 +147,42 @@ function MainLayout() {
             <div className="footer-brand">
               <div className="footer-logo">
                 <span className="footer-logo-icon">TP</span>
-                <span>TravelPro</span>
+                <span>{t('footer.travelPro')}</span>
               </div>
               <p className="footer-description">
-                Premium travel agency platform connecting travelers with reliable drivers
-                and agencies for seamless transportation experiences.
+                {t('footer.description')}
               </p>
             </div>
             <div>
-              <h4 className="footer-heading">Platform</h4>
+              <h4 className="footer-heading">{t('footer.platform', 'Platform')}</h4>
               <div className="footer-links">
-                <Link className="footer-link" to="/search">Search Routes</Link>
-                <Link className="footer-link" to="/bookings">My Bookings</Link>
-                <Link className="footer-link" to="/events">Events</Link>
-                <Link className="footer-link" to="/notifications">Notifications</Link>
+                <Link className="footer-link" to="/search">{t('footer.searchRoutes', 'Search Routes')}</Link>
+                <Link className="footer-link" to="/bookings">{t('footer.myBookings', 'My Bookings')}</Link>
+                <Link className="footer-link" to="/events">{t('footer.events', 'Events')}</Link>
               </div>
             </div>
             <div>
-              <h4 className="footer-heading">Support</h4>
+              <h4 className="footer-heading">{t('footer.support', 'Support')}</h4>
               <div className="footer-links">
-                <a className="footer-link" href="#help">Help Center</a>
-                <a className="footer-link" href="#contact">Contact Us</a>
-                <a className="footer-link" href="#privacy">Privacy Policy</a>
-                <a className="footer-link" href="#terms">Terms of Service</a>
+                <a className="footer-link" href="#help">{t('footer.helpCenter', 'Help Center')}</a>
+                <a className="footer-link" href="#contact">{t('footer.contactUs', 'Contact Us')}</a>
+                <a className="footer-link" href="#privacy">{t('footer.privacyPolicy', 'Privacy Policy')}</a>
+                <a className="footer-link" href="#terms">{t('footer.termsOfService', 'Terms of Service')}</a>
               </div>
             </div>
             <div>
-              <h4 className="footer-heading">Company</h4>
+              <h4 className="footer-heading">{t('footer.company', 'Company')}</h4>
               <div className="footer-links">
-                <a className="footer-link" href="#about">About Us</a>
-                <a className="footer-link" href="#careers">Careers</a>
-                <a className="footer-link" href="#partners">Partners</a>
-                <a className="footer-link" href="#blog">Blog</a>
+                <a className="footer-link" href="#about">{t('footer.aboutUs', 'About Us')}</a>
+                <a className="footer-link" href="#careers">{t('footer.careers', 'Careers')}</a>
+                <a className="footer-link" href="#partners">{t('footer.partners', 'Partners')}</a>
+                <a className="footer-link" href="#blog">{t('footer.blog', 'Blog')}</a>
               </div>
             </div>
           </div>
           <div className="footer-bottom">
             <p className="footer-copyright">
-              &copy; {new Date().getFullYear()} TravelPro. All rights reserved.
+              {t('footer.copyright', { year: new Date().getFullYear() })}
             </p>
             <div className="footer-social">
               <a className="footer-social-link" href="#twitter" aria-label="Twitter">𝕏</a>

@@ -23,6 +23,8 @@ module.exports = (sequelize, DataTypes) => {
       },
       vehicleReg: { type: DataTypes.STRING, allowNull: true, unique: true },
       licenseNo: { type: DataTypes.STRING, allowNull: true },
+      licenseDocUrl: { type: DataTypes.STRING, allowNull: true },
+      vehicleRcUrl: { type: DataTypes.STRING, allowNull: true },
       available: { type: DataTypes.BOOLEAN, defaultValue: true },
     },
     { sequelize, modelName: 'Driver', timestamps: true }

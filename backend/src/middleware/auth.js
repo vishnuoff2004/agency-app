@@ -15,4 +15,19 @@ function authenticate(req, res, next) {
   }
 }
 
-module.exports = { authenticate };
+// Optional: sets req.user if a valid token is present, but does NOT block if missing
+function optionalAuthenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      req.user = verifyToken(token);
+    } catch {
+      // Invalid token — proceed without user
+    }
+  }
+  next();
+}
+
+module.exports = { authenticate, optionalAuthenticate };
+

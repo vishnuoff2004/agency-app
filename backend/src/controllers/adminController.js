@@ -2,7 +2,8 @@ const adminService = require('../services/adminService');
 
 async function getUsers(req, res, next) {
   try {
-    const users = await adminService.getUsers();
+    const { page, limit, search } = req.query;
+    const users = await adminService.getUsers(page, limit, search);
     res.json(users);
   } catch (err) {
     next(err);
@@ -21,7 +22,8 @@ async function toggleUserStatus(req, res, next) {
 
 async function getAgencies(req, res, next) {
   try {
-    const agencies = await adminService.getAgencies();
+    const { page, limit, search } = req.query;
+    const agencies = await adminService.getAgencies(page, limit, search);
     res.json(agencies);
   } catch (err) {
     next(err);
@@ -59,7 +61,8 @@ async function deactivateAgency(req, res, next) {
 
 async function getAllBookings(req, res, next) {
   try {
-    const bookings = await adminService.getAllBookings();
+    const { page, limit, search } = req.query;
+    const bookings = await adminService.getAllBookings(page, limit, search);
     res.json(bookings);
   } catch (err) {
     next(err);

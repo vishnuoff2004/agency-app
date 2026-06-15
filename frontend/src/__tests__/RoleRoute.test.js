@@ -24,7 +24,7 @@ function renderRoute() {
             <TestPage />
           </RoleRoute>
         } />
-        <Route path="/search" element={<div>Search Page</div>} />
+        <Route path="/unauthorized" element={<div>Unauthorized Page</div>} />
       </Routes>
     </MemoryRouter>
   );
@@ -44,13 +44,13 @@ describe('RoleRoute — REQ-052', () => {
   test('TEST-184: redirects when user lacks required role', () => {
     useAuth.mockReturnValue({ user: { role: 'traveler' }, loading: false });
     renderRoute();
-    expect(screen.getByText('Search Page')).toBeInTheDocument();
+    expect(screen.getByText('Unauthorized Page')).toBeInTheDocument();
   });
 
   test('TEST-185: redirects when no user', () => {
     useAuth.mockReturnValue({ user: null, loading: false });
     renderRoute();
-    expect(screen.getByText('Search Page')).toBeInTheDocument();
+    expect(screen.getByText('Unauthorized Page')).toBeInTheDocument();
   });
 
   test('TEST-186: shows loading state while auth is loading', () => {

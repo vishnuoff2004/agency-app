@@ -8,7 +8,22 @@ import BookingHistoryPage from '../pages/traveler/BookingHistoryPage';
 jest.mock('../services/api');
 jest.mock('../services/bookingService');
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key }),
+  useTranslation: () => ({
+    t: (key, defaultValue, options) => {
+      let result = typeof defaultValue === 'string' ? defaultValue : key;
+      const opt = typeof defaultValue === 'object' ? defaultValue : options;
+      if (opt) {
+        Object.keys(opt).forEach(k => {
+          result = result.replace(new RegExp(`{{${k}}}`, 'g'), opt[k]);
+        });
+      }
+      return result;
+    }
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => {},
+  },
 }));
 
 const mockBookings = {

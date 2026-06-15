@@ -10,11 +10,46 @@ async function register(req, res, next) {
         errors: validation.error.details.map(d => d.message),
       });
     }
-    const user = await authService.register(req.body);
-    res.status(201).json(user);
+    const result = await authService.register({
+      ...req.body,
+      licenseDocUrl: req.licenseDocUrl,
+      vehicleRcUrl: req.vehicleRcUrl,
+    });
+    res.status(201).json(result);
   } catch (err) {
-    if (err.status === 409) {
-      return res.status(409).json({ message: err.message });
+    if (err.status === 409) return res.status(409).json({ message: err.message });
+    if (err.status === 400) return res.status(400).json({ message: err.message });
+    next(err);
+  }
+}
+
+async function verifyOtp(req, res, next) {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required.' });
+    }
+    const result = await authService.verifyOtp(email, otp);
+    res.status(200).json(result);
+  } catch (err) {
+    const status = err.status || 400;
+    if ([400, 401, 404, 410].includes(status)) {
+      return res.status(status).json({ message: err.message });
+    }
+    next(err);
+  }
+}
+
+async function resendOtp(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required.' });
+    const result = await authService.resendOtp(email);
+    res.status(200).json(result);
+  } catch (err) {
+    const status = err.status || 400;
+    if ([400, 404].includes(status)) {
+      return res.status(status).json({ message: err.message });
     }
     next(err);
   }
@@ -39,4 +74,4 @@ async function login(req, res, next) {
   }
 }
 
-module.exports = { register, login };
+module.exports = { register, verifyOtp, resendOtp, login };

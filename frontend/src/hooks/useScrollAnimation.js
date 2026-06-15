@@ -1,17 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function useScrollAnimation(options = {}) {
   const ref = useRef(null);
+  const [isRevealed, setIsRevealed] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
+    if (isRevealed) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          el.classList.add('revealed');
-          observer.unobserve(el);
+          setIsRevealed(true);
         }
       },
       {
@@ -22,19 +24,20 @@ export function useScrollAnimation(options = {}) {
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [options.threshold, options.rootMargin]);
+  }, [options.threshold, options.rootMargin, isRevealed]);
 
-  return ref;
+  return [ref, isRevealed];
 }
 
 export function ScrollReveal({ children, className = 'animate-fade-up', ...props }) {
-  const ref = useScrollAnimation(props);
+  const [ref, isRevealed] = useScrollAnimation(props);
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={`${className} ${isRevealed ? 'revealed' : ''}`}>
       {children}
     </div>
   );
 }
 
 export default useScrollAnimation;
+

@@ -6,3 +6,6 @@ global.IntersectionObserver = class {
   unobserve() { return null; }
   disconnect() { return null; }
 };
+
+window.scrollTo = jest.fn();
+

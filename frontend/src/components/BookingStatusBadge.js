@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const statusMap = {
   pending: 'badge-pending',
@@ -13,10 +14,14 @@ const statusMap = {
 };
 
 function BookingStatusBadge({ status, className = '' }) {
+  const { t } = useTranslation();
   const badgeClass = statusMap[status?.toLowerCase()] || 'badge-pending';
+  const cleanStatus = status?.toLowerCase().replace(/[\s_-]+/g, '');
+  const cleanKey = cleanStatus === 'ontrip' || cleanStatus === 'inprogress' ? 'onTrip' : cleanStatus;
+  const displayStatus = t(`booking.status.${cleanKey}`, status || 'Unknown');
   return (
     <span className={`badge ${badgeClass} ${className}`}>
-      {status || 'Unknown'}
+      {displayStatus}
     </span>
   );
 }

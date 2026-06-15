@@ -1,5 +1,6 @@
 const { Booking, BookingStatusHistory, Route, Driver, Agency, Sequelize } = require('../models');
 const { Op } = Sequelize;
+const { getAlgoliaClient, INDEX_BOOKINGS } = require('../config/algolia');
 
 function getValidTransitions() {
   return {
@@ -17,39 +18,6 @@ function isValidTransition(from, to) {
 }
 
 async function createBooking(userId, data) {
-  // Rule 1: Prevent duplicate booking for exact same route/driver/date
-  const existing = await Booking.findOne({
-    where: {
-      userId,
-      routeId: data.routeId,
-      driverId: data.driverId,
-      travelDate: data.travelDate,
-      status: { [Op.notIn]: ['Cancelled'] },
-    },
-  });
-  if (existing) {
-    const err = new Error('You already have a booking for this route on this date');
-    err.status = 409;
-    throw err;
-  }
-
-  // Rule 2: Prevent booking on a date that already has an active trip
-  const sameDateBooking = await Booking.findOne({
-    where: {
-      userId,
-      travelDate: data.travelDate,
-      status: { [Op.notIn]: ['Cancelled', 'Completed'] },
-    },
-  });
-  if (sameDateBooking) {
-    const err = new Error(
-      `You already have an active booking on ${data.travelDate}. ` +
-      `Please complete or cancel your existing trip before booking another on the same date.`
-    );
-    err.status = 409;
-    throw err;
-  }
-
   const route = await Route.findByPk(data.routeId);
   if (!route) {
     const err = new Error('Route not found');
@@ -61,8 +29,29 @@ async function createBooking(userId, data) {
     err.status = 400;
     throw err;
   }
-  if (data.seatCount > route.capacity) {
-    const err = new Error(`Seat count exceeds vehicle capacity of ${route.capacity}`);
+  if (route.status !== 'active') {
+    const err = new Error('This route is no longer available for booking');
+    err.status = 400;
+    throw err;
+  }
+  if (new Date(route.departureTime) <= new Date()) {
+    const err = new Error('Cannot book a route with past departure time');
+    err.status = 400;
+    throw err;
+  }
+
+  // Validate travelDate matches route's departure date
+  const departureDateObj = new Date(route.departureTime);
+  if (isNaN(departureDateObj.getTime())) {
+    const err = new Error('Invalid route departure time configuration');
+    err.status = 400;
+    throw err;
+  }
+  const routeDateLocal = `${departureDateObj.getFullYear()}-${String(departureDateObj.getMonth() + 1).padStart(2, '0')}-${String(departureDateObj.getDate()).padStart(2, '0')}`;
+  const routeDateUTC = departureDateObj.toISOString().split('T')[0];
+
+  if (data.travelDate !== routeDateLocal && data.travelDate !== routeDateUTC) {
+    const err = new Error('Booking date must match the route departure date');
     err.status = 400;
     throw err;
   }
@@ -74,11 +63,76 @@ async function createBooking(userId, data) {
     throw err;
   }
 
+  const additionalSeats = Number(data.seatCount);
+
+  // ── EXCLUSIVE VEHICLE RULE ──────────────────────────────────────────────────
+  // Only ACTIVE bookings (Pending/Confirmed/On Trip) by another user block this.
+  // Completed trips mean the journey is done — driver is free again.
+  const otherUserBooking = await Booking.findOne({
+    where: {
+      driverId: data.driverId,
+      travelDate: data.travelDate,
+      userId: { [Op.ne]: userId },
+      status: { [Op.in]: ['Pending', 'Confirmed', 'On Trip'] },
+    },
+  });
+
+  if (otherUserBooking) {
+    const err = new Error(
+      'This vehicle is already exclusively booked by another traveler for this date. ' +
+      'Please choose a different route or date.'
+    );
+    err.status = 409;
+    throw err;
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
+
+  // Check if the SAME user already has an active booking for this driver+route+date
+  // If so, merge (add more seats) — same person can expand their own booking.
+  const existing = await Booking.findOne({
+    where: {
+      userId,
+      routeId: data.routeId,
+      driverId: data.driverId,
+      travelDate: data.travelDate,
+      status: { [Op.notIn]: ['Cancelled'] },
+    },
+  });
+
+  if (existing) {
+    // Same user — merge: check capacity before adding seats
+    const newTotal = existing.seatCount + additionalSeats;
+    if (newTotal > route.capacity) {
+      const err = new Error(`Total seats (${newTotal}) exceed vehicle capacity of ${route.capacity}`);
+      err.status = 400;
+      throw err;
+    }
+    const prevSeatCount = existing.seatCount;
+    existing.seatCount = newTotal;
+    await existing.save();
+    await BookingStatusHistory.create({
+      bookingId: existing.id,
+      fromStatus: existing.status,
+      toStatus: existing.status,
+      changedBy: userId,
+      reason: `Added ${additionalSeats} more seats (previous: ${prevSeatCount}, new: ${existing.seatCount})`,
+    });
+    return existing;
+  }
+
+  // New booking — validate seat count does not exceed vehicle capacity
+  if (additionalSeats > route.capacity) {
+    const err = new Error(`Seat count (${additionalSeats}) exceeds vehicle capacity of ${route.capacity}`);
+    err.status = 400;
+    throw err;
+  }
+
   const booking = await Booking.create({
     userId,
     routeId: data.routeId,
     driverId: data.driverId,
-    seatCount: data.seatCount,
+    seatCount: additionalSeats,
     travelDate: data.travelDate,
     status: 'Pending',
   });
@@ -93,22 +147,123 @@ async function createBooking(userId, data) {
   return booking;
 }
 
-async function getUserBookings(userId, page = 1, limit = 10) {
+async function getUserBookingsDatabase(userId, page, limit, search) {
   const offset = (page - 1) * limit;
+  const where = { userId };
+  if (search) {
+    where[Op.or] = [
+      { id: { [Op.like]: `%${search}%` } },
+      { status: { [Op.like]: `%${search}%` } },
+      { '$Route.source$': { [Op.like]: `%${search}%` } },
+      { '$Route.destination$': { [Op.like]: `%${search}%` } },
+      { '$Driver.name$': { [Op.like]: `%${search}%` } },
+    ];
+  }
   const { count, rows } = await Booking.findAndCountAll({
-    where: { userId },
+    where,
+    include: [
+      { model: Route, attributes: ['source', 'destination', 'departureTime', 'arrivalTime', 'fare'] },
+      { model: Driver, attributes: ['name', 'phone', 'vehicleType', 'vehicleReg'] },
+    ],
     order: [['createdAt', 'DESC']],
     limit,
     offset,
+    subQuery: false,
   });
 
   return {
-    data: rows,
+    data: rows.map(b => ({
+      id: b.id,
+      status: b.status,
+      seatCount: b.seatCount,
+      travelDate: b.travelDate,
+      createdAt: b.createdAt,
+      cancelReason: b.cancelReason,
+      routeSource: b.Route?.source || null,
+      routeDestination: b.Route?.destination || null,
+      routeDeparture: b.Route?.departureTime || null,
+      routeArrival: b.Route?.arrivalTime || null,
+      fare: b.Route?.fare || null,
+      totalAmount: b.Route?.fare ? (Number(b.Route.fare) * b.seatCount).toFixed(2) : null,
+      driverName: b.Driver?.name || null,
+      driverPhone: b.Driver?.phone || null,
+      vehicleType: b.Driver?.vehicleType || null,
+      vehicleReg: b.Driver?.vehicleReg || null,
+    })),
     page,
     limit,
     totalPages: Math.ceil(count / limit),
     totalItems: count,
   };
+}
+
+async function getUserBookings(userId, page = 1, limit = 10, search = '') {
+  const client = getAlgoliaClient();
+  if (!client || !search) {
+    return getUserBookingsDatabase(userId, page, limit, search);
+  }
+
+  try {
+    const searchResult = await client.searchSingleIndex({
+      indexName: INDEX_BOOKINGS,
+      searchParams: {
+        query: search,
+        filters: `userId = ${userId}`,
+        page: page - 1,
+        hitsPerPage: limit,
+      },
+    });
+
+    const bookingIds = searchResult.hits.map(hit => parseInt(hit.id, 10)).filter(Boolean);
+    if (bookingIds.length === 0) {
+      return {
+        data: [],
+        page,
+        limit,
+        totalPages: 0,
+        totalItems: 0,
+      };
+    }
+
+    const rows = await Booking.findAll({
+      where: { id: { [Op.in]: bookingIds } },
+      include: [
+        { model: Route, attributes: ['source', 'destination', 'departureTime', 'arrivalTime', 'fare'] },
+        { model: Driver, attributes: ['name', 'phone', 'vehicleType', 'vehicleReg'] },
+      ],
+    });
+
+    const rowsMap = new Map(rows.map(b => [b.id, b]));
+    const orderedRows = bookingIds.map(id => rowsMap.get(id)).filter(Boolean);
+
+    return {
+      data: orderedRows.map(b => ({
+        id: b.id,
+        status: b.status,
+        seatCount: b.seatCount,
+        travelDate: b.travelDate,
+        createdAt: b.createdAt,
+        cancelReason: b.cancelReason,
+        routeSource: b.Route?.source || null,
+        routeDestination: b.Route?.destination || null,
+        routeDeparture: b.Route?.departureTime || null,
+        routeArrival: b.Route?.arrivalTime || null,
+        fare: b.Route?.fare || null,
+        totalAmount: b.Route?.fare ? (Number(b.Route.fare) * b.seatCount).toFixed(2) : null,
+        driverName: b.Driver?.name || null,
+        driverPhone: b.Driver?.phone || null,
+        vehicleType: b.Driver?.vehicleType || null,
+        vehicleReg: b.Driver?.vehicleReg || null,
+      })),
+      page,
+      limit,
+      totalPages: searchResult.nbPages,
+      totalItems: searchResult.nbHits,
+    };
+  } catch (err) {
+    console.error('Algolia booking search failed, falling back to database search:', err.message);
+    return getUserBookingsDatabase(userId, page, limit, search);
+  }
 }
 
 async function getBookingById(userId, bookingId) {

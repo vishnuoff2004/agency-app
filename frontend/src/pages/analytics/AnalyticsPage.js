@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getBookingsByDate } from '../../services/analyticsService';
 import Button from '../../components/common/Button';
 import { ScrollReveal } from '../../hooks/useScrollAnimation';
 import { SkeletonTable } from '../../components/common/SkeletonLoader';
 
 function AnalyticsPage() {
+  const { t } = useTranslation();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState('');
@@ -21,12 +23,12 @@ function AnalyticsPage() {
       const result = await getBookingsByDate(params);
       setData(result || []);
     } catch (err) {
-      setError('Failed to load analytics');
+      setError(t('analytics.failedLoad', 'Failed to load analytics'));
       setData([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchAnalytics(startDate, endDate);
@@ -45,8 +47,8 @@ function AnalyticsPage() {
         <ScrollReveal className="animate-fade-up">
           <div className="admin-header">
             <div>
-              <h1 className="admin-title">Bookings Analytics</h1>
-              <p className="text-muted">Track booking trends over time</p>
+              <h1 className="admin-title">{t('analytics.title', 'Bookings Analytics')}</h1>
+              <p className="text-muted">{t('analytics.subtitle', 'Track booking trends over time')}</p>
             </div>
           </div>
         </ScrollReveal>
@@ -56,7 +58,7 @@ function AnalyticsPage() {
             <form onSubmit={handleFilter}>
               <div className="analytics-filters">
                 <div className="form-group">
-                  <label className="form-label">Start Date</label>
+                  <label className="form-label">{t('analytics.startDate', 'Start Date')}</label>
                   <input
                     className="form-input"
                     type="date"
@@ -65,7 +67,7 @@ function AnalyticsPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">End Date</label>
+                  <label className="form-label">{t('analytics.endDate', 'End Date')}</label>
                   <input
                     className="form-input"
                     type="date"
@@ -73,7 +75,7 @@ function AnalyticsPage() {
                     onChange={e => setEndDate(e.target.value)}
                   />
                 </div>
-                <Button type="submit">Apply Filter</Button>
+                <Button type="submit">{t('analytics.filter', 'Apply Filter')}</Button>
               </div>
             </form>
           </div>
@@ -84,7 +86,7 @@ function AnalyticsPage() {
         {error && (
           <div className="error-state">
             <div className="error-state-icon">✕</div>
-            <h3>Error Loading Data</h3>
+            <h3>{t('analytics.errorLoadingData', 'Error Loading Data')}</h3>
             <p className="text-muted mt-sm">{error}</p>
           </div>
         )}
@@ -92,8 +94,8 @@ function AnalyticsPage() {
         {!loading && !error && data.length === 0 && (
           <div className="empty-state">
             <div className="empty-state-icon">📊</div>
-            <h3 className="empty-state-title">No Data Available</h3>
-            <p className="text-muted mt-sm">No booking data found for the selected period.</p>
+            <h3 className="empty-state-title">{t('analytics.noDataAvailable', 'No Data Available')}</h3>
+            <p className="text-muted mt-sm">{t('analytics.noData', 'No booking data found for the selected period.')}</p>
           </div>
         )}
 
@@ -101,12 +103,12 @@ function AnalyticsPage() {
           <ScrollReveal className="animate-fade-up">
             <div className="stats-grid mb-lg">
               <div className="stat-card">
-                <div className="stat-card-label">Total Bookings</div>
+                <div className="stat-card-label">{t('analytics.bookings', 'Total Bookings')}</div>
                 <div className="stat-card-value">{totalBookings}</div>
               </div>
               <div className="stat-card">
-                <div className="stat-card-label">Date Range</div>
-                <div className="stat-card-value">{data.length} days</div>
+                <div className="stat-card-label">{t('analytics.dateRange', 'Date Range')}</div>
+                <div className="stat-card-value">{t('analytics.daysCount', '{{count}} days', { count: data.length })}</div>
               </div>
             </div>
 
@@ -114,8 +116,8 @@ function AnalyticsPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Bookings</th>
+                    <th>{t('analytics.date', 'Date')}</th>
+                    <th>{t('analytics.bookings', 'Bookings')}</th>
                   </tr>
                 </thead>
                 <tbody>

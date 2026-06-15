@@ -1,27 +1,54 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
+import { getAgencies } from '../../services/adminService';
 import Button from '../../components/common/Button';
+import Pagination from '../../components/common/Pagination';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { ScrollReveal } from '../../hooks/useScrollAnimation';
 
 function AgencyManagementPage() {
+  const { t } = useTranslation();
   const [agencies, setAgencies] = useState([]);
   const [agencyAdmins, setAgencyAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: '', email: '', phone: '', adminId: '' });
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
+  // Debounce search query
   useEffect(() => {
-    Promise.all([
-      api.get('/admin/agencies'),
-      api.get('/admin/users'),
-    ]).then(([agenciesRes, usersRes]) => {
-      setAgencies(agenciesRes.data || []);
-      setAgencyAdmins((usersRes.data || []).filter(u => u.role === 'agency_admin'));
-    }).catch(() => {})
-    .finally(() => setLoading(false));
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Fetch agency admins dropdown list (once)
+  useEffect(() => {
+    api.get('/admin/users')
+      .then(res => {
+        setAgencyAdmins((res.data || []).filter(u => u.role === 'agency_admin'));
+      })
+      .catch(() => {});
   }, []);
+
+  // Fetch paginated/searched agencies list
+  useEffect(() => {
+    setLoading(true);
+    getAgencies(page, 10, debouncedSearch)
+      .then(data => {
+        setAgencies(Array.isArray(data) ? data : data.data || []);
+        setTotalPages(data.totalPages || 0);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [page, debouncedSearch]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -30,8 +57,10 @@ function AgencyManagementPage() {
       await api.post('/admin/agencies', form);
       setForm({ name: '', email: '', phone: '', adminId: '' });
       setShowForm(false);
-      const res = await api.get('/admin/agencies');
-      setAgencies(res.data || []);
+      // Reload current search/page
+      const res = await getAgencies(page, 10, debouncedSearch);
+      setAgencies(Array.isArray(res) ? res : res.data || []);
+      setTotalPages(res.totalPages || 0);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed');
     } finally {
@@ -48,33 +77,40 @@ function AgencyManagementPage() {
     }
   };
 
-  if (loading) return <LoadingSpinner text="Loading agencies..." />;
-
   return (
     <div className="admin-page">
       <div className="container">
         <ScrollReveal className="animate-fade-up">
-          <div className="admin-header">
+          <div className="admin-header" style={{ flexWrap: 'wrap', gap: 16 }}>
             <div>
-              <h1 className="admin-title">Agency Management</h1>
-              <p className="text-muted">{agencies.length} agencies registered</p>
+              <h1 className="admin-title">{t('admin.agencyManagement', 'Agency Management')}</h1>
+              <p className="text-muted">{t('admin.agenciesRegisteredCount', '{{count}} agencies registered', { count: agencies.length })}</p>
             </div>
-            <Button onClick={() => setShowForm(!showForm)}>
-              {showForm ? 'Cancel' : 'Create Agency'}
-            </Button>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <input
+                className="form-input"
+                style={{ maxWidth: 280, margin: 0 }}
+                placeholder={t('admin.searchAgencies', 'Search by name, email, phone…')}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <Button onClick={() => setShowForm(!showForm)}>
+                {showForm ? t('common.cancel', 'Cancel') : t('admin.newAgency', 'Create Agency')}
+              </Button>
+            </div>
           </div>
         </ScrollReveal>
 
         {showForm && (
           <ScrollReveal className="animate-fade-up">
             <div className="card mb-xl">
-              <h3 className="card-title mb-lg">New Agency</h3>
+              <h3 className="card-title mb-lg">{t('admin.newAgency', 'New Agency')}</h3>
               <form onSubmit={handleCreate}>
                 <div className="form-input-group">
                   <div className="form-group" style={{ flex: 1 }}>
                     <input
                       className="form-input"
-                      placeholder="Agency Name"
+                      placeholder={t('admin.agencyNamePlaceholder', 'Agency Name')}
                       value={form.name}
                       onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                       required
@@ -84,7 +120,7 @@ function AgencyManagementPage() {
                     <input
                       className="form-input"
                       type="email"
-                      placeholder="Email"
+                      placeholder={t('auth.email', 'Email')}
                       value={form.email}
                       onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
                       required
@@ -93,7 +129,7 @@ function AgencyManagementPage() {
                   <div className="form-group" style={{ flex: 1 }}>
                     <input
                       className="form-input"
-                      placeholder="Phone"
+                      placeholder={t('auth.phone', 'Phone')}
                       value={form.phone}
                       onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
                       required
@@ -106,14 +142,14 @@ function AgencyManagementPage() {
                       onChange={e => setForm(prev => ({ ...prev, adminId: e.target.value }))}
                       required
                     >
-                      <option value="">Select Agency Admin</option>
+                      <option value="">{t('admin.selectAgencyAdmin', 'Select Agency Admin')}</option>
                       {agencyAdmins.map(u => (
                         <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                       ))}
                     </select>
                   </div>
                   <div className="form-group">
-                    <Button type="submit" loading={creating}>Create</Button>
+                    <Button type="submit" loading={creating}>{t('common.create', 'Create')}</Button>
                   </div>
                 </div>
               </form>
@@ -121,11 +157,13 @@ function AgencyManagementPage() {
           </ScrollReveal>
         )}
 
-        {agencies.length === 0 ? (
+        {loading ? (
+          <LoadingSpinner text={t('admin.loadingAgencies', 'Loading agencies...')} />
+        ) : agencies.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">🏢</div>
-            <h3 className="empty-state-title">No Agencies</h3>
-            <p className="empty-state-text">Create your first agency to get started.</p>
+            <h3 className="empty-state-title">{t('admin.noAgencies', 'No Agencies')}</h3>
+            <p className="empty-state-text">{search ? 'No agencies match your search.' : t('admin.createFirstAgency', 'Create your first agency to get started.')}</p>
           </div>
         ) : (
           <ScrollReveal className="animate-fade-up">
@@ -133,11 +171,11 @@ function AgencyManagementPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{t('auth.name', 'Name')}</th>
+                    <th>{t('auth.email', 'Email')}</th>
+                    <th>{t('auth.phone', 'Phone')}</th>
+                    <th>{t('agency.status', 'Status')}</th>
+                    <th>{t('common.actions', 'Actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,7 +187,7 @@ function AgencyManagementPage() {
                       <td>
                         <span className="user-list-item-status">
                           <span className={`status-dot ${a.active !== false ? 'active' : 'inactive'}`} />
-                          {a.active !== false ? 'Active' : 'Inactive'}
+                          {a.active !== false ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
                         </span>
                       </td>
                       <td>
@@ -158,7 +196,7 @@ function AgencyManagementPage() {
                           size="sm"
                           onClick={() => handleToggleActive(a.id, a.active !== false)}
                         >
-                          {a.active !== false ? 'Deactivate' : 'Activate'}
+                          {a.active !== false ? t('agency.deactivate', 'Deactivate') : t('agency.activate', 'Activate')}
                         </Button>
                       </td>
                     </tr>
@@ -166,6 +204,7 @@ function AgencyManagementPage() {
                 </tbody>
               </table>
             </div>
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </ScrollReveal>
         )}
       </div>

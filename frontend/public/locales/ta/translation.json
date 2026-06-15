@@ -43,12 +43,14 @@
       "confirmed": "உறுதிப்படுத்தப்பட்ட",
       "onTrip": "பயணத்தில்",
       "completed": "முடிந்தது",
-      "cancelled": "ரத்து செய்யப்பட்ட"
+      "cancelled": "ரத்து செய்யப்பட்ட",
+      "rejected": "நிராகரிக்கப்பட்டது"
     },
     "cancel": "முன்பதிவை ரத்து செய்க",
     "cancelConfirm": "இந்த முன்பதிவை ரத்து செய்ய விரும்பினால் உறுதிப்படுத்தவும்.",
     "noBookings": "முன்பதிவுகள் கிடைக்கவில்லை.",
     "seatCount": "இருக்கைகள்",
+    "seatsCount": "🎟️ {{count}} இருக்கைகள்",
     "travelDate": "பயண தேதி",
     "route": "வழி",
     "totalFare": "மொத்த கட்டணம்",
@@ -74,7 +76,14 @@
     "statusHistory": "நிலை வரலாறு",
     "routeDetailsUnavailable": "வழி விவரங்கள் கிடைக்கவில்லை",
     "driverDetailsUnavailable": "ஓட்டுனர் விவரங்கள் கிடைக்கவில்லை",
-    "agencyDetailsUnavailable": "நிறுவன விவரங்கள் கிடைக்கவில்லை"
+    "agencyDetailsUnavailable": "நிறுவன விவரங்கள் கிடைக்கவில்லை",
+    "tripInfo": "பயண விவரங்கள்",
+    "driverAndVehicle": "ஓட்டுனர் மற்றும் வாகனம்",
+    "serviceProvider": "சேவை வழங்குநர்",
+    "vehicleRegNo": "வாகன பதிவு எண்",
+    "cannotCancel": "ரத்து செய்ய முடியாது",
+    "confirmBooking": "முன்பதிவை உறுதி செய்",
+    "dateLocked": "பயண தேதி வழியின் அட்டவணைப்படி நிர்ணயிக்கப்பட்டுள்ளது"
   },
   "auth": {
     "login": "உள்நுழைக",
@@ -165,7 +174,9 @@
     "next": "அடுத்த",
     "actions": "செயல்கள்",
     "active": "செயல்படும்",
-    "inactive": "செயல்படாத"
+    "inactive": "செயல்படாத",
+    "accept": "✓ ஏற்றுக்கொள்",
+    "deny": "✕ நிராகரி"
   },
   "analytics": {
     "title": "முன்பதிவு பகுப்பாய்வு",
@@ -174,7 +185,9 @@
     "filter": "வடிகட்டி",
     "noData": "முன்பதிவு தரவு கிடைக்கவில்லை.",
     "date": "தேதி",
-    "bookings": "முன்பதிவுகள்"
+    "bookings": "முன்பதிவுகள்",
+    "dateRange": "தேதி வரம்பு",
+    "daysCount": "{{count}} நாட்கள்"
   },
   "driver": {
     "dashboard": "ஓட்டுனர் வாரியம்",
@@ -197,7 +210,11 @@
     "noRouteHistory": "வழி வரலாறு இல்லை",
     "joinRequestSent": "{{agencyName}} க்கு சேர்க்கை கோரிக்கை அனுப்பப்பட்டது! அனுமதிக்காக காத்திருக்கிறது.",
     "requestCancelled": "கோரிக்கை ரத்து செய்யப்பட்டது.",
-    "failedToLoadDriverRequests": "ஓட்டுனர் கோரிக்கைகளை ஏற்றுவது தோல்வியடைந்தது"
+    "failedToLoadDriverRequests": "ஓட்டுனர் கோரிக்கைகளை ஏற்றுவது தோல்வியடைந்தது",
+    "activeTripsTab": "செயலில் உள்ள பயணங்கள் ({{count}})",
+    "pendingRequestsTab": "நிலுவையில் உள்ள கோரிக்கைகள் ({{count}})",
+    "pastTripsTab": "கடந்த கால பயணங்கள் ({{count}})",
+    "pendingRequestsCount": "{{count}} நிலுவையில் உள்ள கோரிக்கைகள்"
   },
   "agency": {
     "dashboard": "நிறுவன வாரியம்",
@@ -215,7 +232,9 @@
     "route": "வழி",
     "status": "நிலை",
     "activate": "செயல்படுத்து",
-    "deactivate": "செயல்படுத்த நிறுத்து"
+    "deactivate": "செயல்படுத்த நிறுத்து",
+    "bookingsCount": "{{count}} முன்பதிவுகள்",
+    "joinRequestsCount": "{{count}} ஓட்டுனர்கள் உங்கள் நிறுவனத்தில் இணைய விரும்புகிறார்கள்"
   },
   "admin": {
     "dashboard": "நிர்வாக வாரியம்",
@@ -237,7 +256,10 @@
     "user": "பயனர்",
     "email": "மின்னஞ்சல்",
     "bookingId": "முன்பதிவு ID",
-    "bookingStatusBreakdown": "முன்பதிவு நிலை முறிவு"
+    "bookingStatusBreakdown": "முன்பதிவு நிலை முறிவு",
+    "agenciesRegisteredCount": "{{count}} நிறுவனங்கள் பதிவு செய்யப்பட்டுள்ளன",
+    "totalBookingsCount": "மொத்தம் {{count}} முன்பதிவுகள்",
+    "usersCount": "தளத்தில் {{count}} பயனர்கள்"
   },
   "error": {
     "unauthorized": "அணுக மறுக்கப்பட்டது",
@@ -268,5 +290,25 @@
     "copyright": "© {{year}} TravelPro. அனைத்து உரிமைகளும் உபயோகத்தில் உள்ளன.",
     "logo": "TravelPro",
     "travelPro": "TravelPro"
-  }
+  },
+  "stats": {
+    "totalUsers": "மொத்த பயனர்கள்",
+    "totalAgencies": "மொத்த நிறுவனங்கள்",
+    "totalActiveBookings": "மொத்த செயலில் உள்ள முன்பதிவுகள்",
+    "pendingRequests": "நிலுவையில் உள்ள கோரிக்கைகள்",
+    "activeTrips": "செயலில் உள்ள பயணங்கள்",
+    "totalDrivers": "மொத்த ஓட்டுனர்கள்",
+    "totalBookings": "மொத்த முன்பதிவுகள்",
+    "revenue": "வருவாய்",
+    "completedTrips": "முடிக்கப்பட்ட பயணங்கள்"
+  },
+  "booking.failedToLoad": "முன்பதிவுகளை ஏற்றுவது தோல்வியடைந்தது",
+  "booking.errorLoading": "முன்பதிவுகளை ஏற்றுவதில் பிழை",
+  "Test Notification": "சோதனை அறிவிப்பு",
+  "This is a test": "இது ஒரு சோதனை",
+  "Booking Confirmed": "முன்பதிவு உறுதிப்படுத்தப்பட்டது",
+  "Booking Cancelled": "முன்பதிவு ரத்துசெய்யப்பட்டது",
+  "Trip Started": "பயணம் தொடங்கியது",
+  "Trip Completed": "பயணம் முடிந்தது",
+  "New Booking Request": "புதிய முன்பதிவு கோரிக்கை"
 }

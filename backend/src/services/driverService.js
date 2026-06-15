@@ -1,4 +1,4 @@
-const { Driver, User, Route, Booking, BookingStatusHistory, Sequelize } = require('../models');
+const { Driver, User, Route, Booking, BookingStatusHistory, Sequelize, sequelize } = require('../models');
 const { Op } = Sequelize;
 
 async function createProfile(userId, data) {
@@ -93,6 +93,7 @@ async function createRoute(userId, data) {
     fare: data.fare,
     capacity: data.capacity,
     available: data.available !== undefined ? data.available : true,
+    status: 'active',
   });
 
   return route;
@@ -103,6 +104,11 @@ async function setRouteAvailability(driverId, routeId, available) {
   if (!route) {
     const err = new Error('Route not found');
     err.status = 404;
+    throw err;
+  }
+  if (available && route.status !== 'active') {
+    const err = new Error('Cannot make a completed or cancelled route available');
+    err.status = 400;
     throw err;
   }
   route.available = available;
@@ -241,23 +247,38 @@ async function updateTripStatus(driverUserId, bookingId, newStatus) {
   }
 
   const prevStatus = booking.status;
-  booking.status = newStatus;
-  await booking.save();
 
-  if (newStatus === 'On Trip') {
-    driver.available = false;
-    await driver.save();
-  } else if (newStatus === 'Completed') {
-    driver.available = true;
-    await driver.save();
+  const t = await sequelize.transaction();
+
+  try {
+    booking.status = newStatus;
+    await booking.save({ transaction: t });
+
+    if (newStatus === 'On Trip') {
+      driver.available = false;
+      await driver.save({ transaction: t });
+    } else if (newStatus === 'Completed') {
+      driver.available = true;
+      await driver.save({ transaction: t });
+      const route = await Route.findByPk(booking.routeId, { transaction: t });
+      if (route && route.status === 'active') {
+        route.status = 'completed';
+        await route.save({ transaction: t });
+      }
+    }
+
+    await BookingStatusHistory.create({
+      bookingId: booking.id,
+      fromStatus: prevStatus,
+      toStatus: newStatus,
+      changedBy: driverUserId,
+    }, { transaction: t });
+
+    await t.commit();
+  } catch (err) {
+    await t.rollback();
+    throw err;
   }
-
-  await BookingStatusHistory.create({
-    bookingId: booking.id,
-    fromStatus: prevStatus,
-    toStatus: newStatus,
-    changedBy: driverUserId,
-  });
 
   return booking;
 }
