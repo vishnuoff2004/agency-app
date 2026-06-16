@@ -4,31 +4,52 @@ const { getAlgoliaClient, INDEX_NAME } = require('../config/algolia');
 
 // Original database-based search implementation (fallback)
 async function searchRoutesDatabase(source, destination, userId = null, filters = {}) {
-  const where = {
+  const baseWhere = {
     available: true,
     status: 'active',
     departureTime: { [Op.gte]: new Date() },
   };
   if (source) {
-    where.source = { [Op.like]: `%${source}%` };
+    baseWhere.source = { [Op.like]: `%${source}%` };
   }
   if (destination) {
-    where.destination = { [Op.like]: `%${destination}%` };
+    baseWhere.destination = { [Op.like]: `%${destination}%` };
   }
   const parsedPriceMin = filters.priceMin !== undefined && filters.priceMin !== '' ? parseFloat(filters.priceMin) : NaN;
   const parsedPriceMax = filters.priceMax !== undefined && filters.priceMax !== '' ? parseFloat(filters.priceMax) : NaN;
 
   if (!isNaN(parsedPriceMin)) {
-    where.fare = { ...(where.fare || {}), [Op.gte]: parsedPriceMin };
+    baseWhere.fare = { ...(baseWhere.fare || {}), [Op.gte]: parsedPriceMin };
   }
   if (!isNaN(parsedPriceMax)) {
-    where.fare = { ...(where.fare || {}), [Op.lte]: parsedPriceMax };
+    baseWhere.fare = { ...(baseWhere.fare || {}), [Op.lte]: parsedPriceMax };
   }
 
   if (filters.seats) {
-    where.capacity = { [Op.gte]: parseInt(filters.seats, 10) };
+    baseWhere.capacity = { [Op.gte]: parseInt(filters.seats, 10) };
   }
 
+  // 1. Calculate facet counts based on all routes matching the base filters (excluding vehicle type filter)
+  const allRoutesForFacets = await Route.findAll({
+    where: baseWhere,
+    include: [
+      {
+        model: Driver,
+        required: true,
+        include: [{ model: Agency, where: { active: true }, required: true }],
+      },
+    ],
+  });
+
+  const vehicleTypeCounts = {};
+  allRoutesForFacets.forEach((route) => {
+    const type = route.Driver?.vehicleType;
+    if (type) {
+      vehicleTypeCounts[type] = (vehicleTypeCounts[type] || 0) + 1;
+    }
+  });
+
+  // 2. Filter by vehicle types for actual results if filter is set
   const driverWhere = {};
   if (filters.vehicleTypes) {
     const types = filters.vehicleTypes.split(',').map(t => t.trim()).filter(Boolean);
@@ -38,7 +59,7 @@ async function searchRoutesDatabase(source, destination, userId = null, filters 
   }
 
   const routes = await Route.findAll({
-    where,
+    where: baseWhere,
     include: [
       {
         model: Driver,
@@ -49,7 +70,9 @@ async function searchRoutesDatabase(source, destination, userId = null, filters 
     ],
   });
 
-  return processRouteAvailability(routes, userId);
+  const result = await processRouteAvailability(routes, userId);
+  result.facetCounts = { vehicleType: vehicleTypeCounts };
+  return result;
 }
 
 // Helper to run booking and exclusive lock checks on returned route objects
@@ -124,7 +147,6 @@ async function searchRoutes(source, destination, userId = null, filters = {}) {
   if (!client) {
     // If Algolia is not initialized, use database search
     const result = await searchRoutesDatabase(source, destination, userId, filters);
-    result.facetCounts = null;
     return result;
   }
 
@@ -200,7 +222,6 @@ async function searchRoutes(source, destination, userId = null, filters = {}) {
   } catch (err) {
     console.error('Algolia search failed, falling back to database search:', err.message);
     const result = await searchRoutesDatabase(source, destination, userId, filters);
-    result.facetCounts = null;
     return result;
   }
 }

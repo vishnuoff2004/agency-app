@@ -1,3 +1,6 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+
 module.exports = {
   database: process.env.DB_NAME || 'travel_agency',
   username: process.env.DB_USER || 'root',

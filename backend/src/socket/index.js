@@ -6,7 +6,7 @@ const { authenticateSocket } = require('./authenticateSocket');
 function createSocketServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+      origin: process.env.CORS_ORIGIN || '*',
       methods: ['GET', 'POST'],
       credentials: true,
     },
@@ -17,7 +17,19 @@ function createSocketServer(httpServer) {
   if (process.env.REDIS_URL) {
     const pubClient = createClient({ url: process.env.REDIS_URL });
     const subClient = pubClient.duplicate();
-    io.adapter(createAdapter(pubClient, subClient));
+    
+    pubClient.on('error', (err) => console.log('Socket.IO Redis Pub Client Error:', err.message));
+    subClient.on('error', (err) => console.log('Socket.IO Redis Sub Client Error:', err.message));
+    
+    pubClient.connect()
+      .then(() => subClient.connect())
+      .then(() => {
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log('Socket.IO Redis adapter connected successfully');
+      })
+      .catch((err) => {
+        console.log('Socket.IO Redis connection failed, continuing without adapter:', err.message);
+      });
   }
 
   const bookingsNamespace = io.of('/bookings');

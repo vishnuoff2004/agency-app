@@ -77,7 +77,11 @@ async function register(data) {
   // Send OTP email (throws if SMTP is misconfigured so user knows)
   await sendOtpEmail({ name: user.name, email: user.email, otp });
 
-  return { message: 'OTP sent to your email. Please verify to activate your account.', email: user.email };
+  const response = { message: 'OTP sent to your email. Please verify to activate your account.', email: user.email };
+  if (process.env.NODE_ENV !== 'production') {
+    response.devOtp = otp;
+  }
+  return response;
 }
 
 /* ──────────────────────────────────────────────
@@ -150,7 +154,12 @@ async function resendOtp(email) {
   await user.save();
 
   await sendOtpEmail({ name: user.name, email: user.email, otp });
-  return { message: 'A new OTP has been sent to your email.' };
+  
+  const response = { message: 'A new OTP has been sent to your email.' };
+  if (process.env.NODE_ENV !== 'production') {
+    response.devOtp = otp;
+  }
+  return response;
 }
 
 /* ──────────────────────────────────────────────

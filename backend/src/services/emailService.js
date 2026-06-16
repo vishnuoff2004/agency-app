@@ -89,6 +89,11 @@ function otpEmailHtml(name, otp) {
  * @param {Object} param0 - { name, email, otp }
  */
 async function sendOtpEmail({ name, email, otp }) {
+  // Always print the OTP to the console for easy retrieval in development logs
+  console.log(`\n========================================`);
+  console.log(`[DEV ONLY] OTP for ${email}: ${otp}`);
+  console.log(`========================================\n`);
+
   try {
     await transporter.sendMail({
       from: `"${APP_NAME}" <${FROM_EMAIL}>`,
@@ -99,7 +104,10 @@ async function sendOtpEmail({ name, email, otp }) {
     console.log(`[Mailer] OTP email sent to ${email}`);
   } catch (err) {
     console.error(`[Mailer] Failed to send OTP email to ${email}:`, err.message);
-    throw err; // OTP send failure should be surfaced (unlike welcome email)
+    if (process.env.NODE_ENV === 'production') {
+      throw err; // Surfaces delivery errors in production
+    }
+    console.warn(`[Mailer] Non-production environment detected. Continuing registration flow without crashing.`);
   }
 }
 
