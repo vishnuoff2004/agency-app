@@ -5,6 +5,11 @@ import { router } from 'expo-router';
 const api = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api',
   timeout: 10000,
+  headers: {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  },
 });
 
 api.interceptors.request.use(
