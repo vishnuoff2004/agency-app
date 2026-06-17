@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (role === 'traveler') {
         router.replace('/(tabs)/search');
       } else {
-        const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'http://localhost:3000';
+        const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://outward-likewise-dolphin.ngrok-free.dev';
         const targetPath = roleRoutes[role] || '/search';
         const url = `${webBaseUrl}${targetPath}`;
         
@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (role === 'traveler') {
         router.replace('/(tabs)/search');
       } else {
-        const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'http://localhost:3000';
+        const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL || 'https://outward-likewise-dolphin.ngrok-free.dev';
         const targetPath = roleRoutes[role] || '/search';
         const url = `${webBaseUrl}${targetPath}`;
         Linking.canOpenURL(url).then((supported) => {
