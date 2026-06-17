@@ -28,6 +28,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(require('./monitoring/metrics').metricsMiddleware);
 app.use(rateLimiter);
 
+app.get('/download-apk', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../../mobile-app-release.apk'));
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

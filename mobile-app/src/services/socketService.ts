@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'https://outward-likewise-dolphin.ngrok-free.dev';
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'http://192.168.1.4:5000';
 
 class SocketManager {
   private sockets: Record<string, Socket> = {};

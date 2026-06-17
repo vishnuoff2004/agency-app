@@ -3,7 +3,7 @@ import { getToken, deleteToken, deleteUser } from '../utils/secureStore';
 import { router } from 'expo-router';
 
 const api = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL || 'https://outward-likewise-dolphin.ngrok-free.dev/api',
+  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.4:5000/api',
   timeout: 10000,
   headers: {
     'ngrok-skip-browser-warning': 'true',

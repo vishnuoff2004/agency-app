@@ -14,7 +14,7 @@ function createSocketServer(httpServer) {
     pingTimeout: 20000,
   });
 
-  if (process.env.REDIS_URL) {
+  if (process.env.REDIS_URL && process.env.USE_REDIS === 'true') {
     const pubClient = createClient({ url: process.env.REDIS_URL });
     const subClient = pubClient.duplicate();
     
